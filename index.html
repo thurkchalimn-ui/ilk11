@@ -965,11 +965,33 @@
     const target=document.getElementById('captureArea');
     try{
       const canvas=await html2canvas(target, {backgroundColor:null, scale:2, useCORS:true});
-      const link=document.createElement('a');
       const safeName=(state.teamName||'ilk11').replace(/[^a-zA-Z0-9ığüşöçİĞÜŞÖÇ]+/g,'-');
-      link.download=safeName+'-dizilis.png';
-      link.href=canvas.toDataURL('image/png');
+      const fileName = safeName+'-dizilis.png';
+
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // On phones, try the native share sheet first — lets the user tap "Save Image" to save straight to Photos.
+      if(navigator.canShare && navigator.canShare({ files:[file] })){
+        try{
+          await navigator.share({ files:[file], title: fileName });
+          statusEl.textContent='Paylaşım açıldı — "Resmi Kaydet" ile Fotoğraflar\'a ekleyebilirsin ✓';
+          setTimeout(()=>{ statusEl.textContent='\u00A0'; }, 3000);
+          return;
+        }catch(shareErr){
+          if(shareErr && shareErr.name === 'AbortError'){
+            statusEl.textContent='\u00A0';
+            return; // user cancelled the share sheet, don't fall back to a download
+          }
+          // otherwise fall through to the normal download below
+        }
+      }
+
+      const link=document.createElement('a');
+      link.download=fileName;
+      link.href=URL.createObjectURL(blob);
       link.click();
+      URL.revokeObjectURL(link.href);
       statusEl.textContent='İndirildi ✓';
       setTimeout(()=>{ statusEl.textContent='\u00A0'; }, 2000);
     }catch(e){
