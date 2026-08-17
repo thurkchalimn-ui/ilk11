@@ -88,8 +88,7 @@
   .dizilis-toolbar .status{ flex:0 0 auto; margin:0; }
   @media (max-width:700px){ .dizilis-toolbar .btn{ flex:1 1 140px; } }
 
-  .dizilis-grid{ display:grid; grid-template-columns: 260px 1fr; gap:16px; }
-  @media (max-width:980px){ .dizilis-grid{ grid-template-columns:1fr; } }
+  .dizilis-grid{ display:grid; grid-template-columns: 1fr; gap:16px; }
 
   .pool-panel{
     background: linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -260,14 +259,9 @@
       <div class="status" id="status">&nbsp;</div>
     </div>
 
+    <div class="hint-box" style="margin-bottom:14px;">Sahadaki ya da yedekteki bir <b>formaya dokun</b>, açılan listeden oyuncuyu seç. Dolu bir formaya dokunursan değiştirebilir ya da boşaltabilirsin.</div>
+
     <div class="dizilis-grid">
-
-      <div class="pool-panel">
-        <div class="hint-box">Kadrodan bir <b>oyuncuya dokun</b>, sonra sahada ya da yedek listesinde bir <b>yuvaya dokun</b>. Dolu yuvaya dokunursan oyuncu kadroya döner.</div>
-        <h3>Kadro Havuzu</h3>
-        <div class="pool-list" id="poolList"></div>
-      </div>
-
       <div class="capture-wrap">
         <div class="capture" id="captureArea">
           <div class="header-row">
@@ -344,6 +338,16 @@
   </div>
 </div>
 
+<!-- player picker modal -->
+<div class="modal-overlay" id="pickerOverlay">
+  <div class="modal">
+    <h3 id="pickerTitle">Oyuncu Seç</h3>
+    <button class="btn btn-ghost" id="pickerClearBtn" style="display:none; margin-bottom:10px;">Yuvayı Boşalt</button>
+    <div class="pool-list" id="pickerList" style="max-height:50vh; overflow-y:auto;"></div>
+    <button class="btn btn-ghost modal-close" id="pickerCloseBtn">Vazgeç</button>
+  </div>
+</div>
+
 <script>
 (function(){
   const FORMATIONS = {
@@ -400,7 +404,7 @@
   };
 
   let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  let selectedRosterId = null;
+  let pendingSlot = null; // {type:'pitch'|'bench', index}
   const STORAGE_KEY = "ilk11-lineup-v3";
 
   // ---------- Firebase (cross-device sync) ----------
@@ -441,7 +445,7 @@
   const logoPreview=document.getElementById('logoPreview');
   const kadroGrid=document.getElementById('kadroGrid');
   const kadroCount=document.getElementById('kadroCount');
-  const poolList=document.getElementById('poolList');
+  
   const statusEl=document.getElementById('status');
   const crest=document.getElementById('crest');
   const fbCode=document.getElementById('fbCode');
@@ -581,7 +585,7 @@
   // ---------- colors ----------
   COLORS.forEach(c=>{
     const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=c; sw.dataset.hex=c;
-    sw.addEventListener('click', ()=>{ state.color=c; renderColors(); renderPitch(); renderBench(); renderPool(); saveState(); });
+    sw.addEventListener('click', ()=>{ state.color=c; renderColors(); renderPitch(); renderBench(); saveState(); });
     colorRow.appendChild(sw);
   });
   function renderColors(){ [...colorRow.children].forEach(sw=> sw.classList.toggle('active', sw.dataset.hex===state.color)); }
@@ -601,7 +605,7 @@
     state.formation=formationSelect.value;
     state.pitchAssign = new Array(countSlots(state.formation)).fill(null);
     fbCode.textContent=state.formation;
-    renderPitch(); renderBench(); renderPool(); renderKadro(); renderStats();
+    renderPitch(); renderBench(); renderKadro(); renderStats();
     saveState();
   });
   benchCountSelect.addEventListener('change', ()=>{
@@ -612,7 +616,7 @@
     state.benchAssign = next;
     state.benchCount = n;
     document.getElementById('benchMaxLabel').textContent = 'MAKS ' + n + ' KİŞİ';
-    renderBench(); renderPool(); renderKadro(); renderStats();
+    renderBench(); renderKadro(); renderStats();
     saveState();
   });
   logoInput.addEventListener('change',(e)=>{
@@ -651,7 +655,7 @@
       nameIn.value=p.name;
       nameIn.addEventListener('input', ()=>{
         p.name=nameIn.value;
-        renderPitch(); renderBench(); renderPool(); renderStats();
+        renderPitch(); renderBench(); renderStats();
         kadroCount.textContent = state.roster.filter(r=>r.name.trim()).length + '/35 dolu';
         saveState();
       });
@@ -659,7 +663,7 @@
       const posIn=document.createElement('input');
       posIn.type='text'; posIn.className='kpos'; posIn.placeholder='Mevki (örn: Sol Bek)';
       posIn.value=p.pos;
-      posIn.addEventListener('input', ()=>{ p.pos=posIn.value; renderPitch(); renderBench(); renderPool(); saveState(); });
+      posIn.addEventListener('input', ()=>{ p.pos=posIn.value; renderPitch(); renderBench(); saveState(); });
 
       row.appendChild(idxEl); row.appendChild(dot); row.appendChild(nameIn); row.appendChild(posIn);
       kadroGrid.appendChild(row);
@@ -667,26 +671,59 @@
     kadroCount.textContent = filled + '/35 dolu';
   }
 
-  // ---------- pool (Diziliş tab, compact, same roster) ----------
-  function renderPool(){
-    poolList.innerHTML='';
-    state.roster.forEach(p=>{
+  // ---------- player picker modal ----------
+  const pickerOverlay = document.getElementById('pickerOverlay');
+  const pickerList = document.getElementById('pickerList');
+  const pickerTitle = document.getElementById('pickerTitle');
+  const pickerClearBtn = document.getElementById('pickerClearBtn');
+  const pickerCloseBtn = document.getElementById('pickerCloseBtn');
+
+  function openPicker(type, index){
+    pendingSlot = {type, index};
+    const occupant = type==='pitch' ? state.pitchAssign[index] : state.benchAssign[index];
+    pickerTitle.textContent = type==='pitch' ? 'Sahaya Oyuncu Seç' : 'Yedeğe Oyuncu Seç';
+    pickerClearBtn.style.display = occupant ? 'block' : 'none';
+    renderPickerList();
+    pickerOverlay.classList.add('open');
+  }
+  function closePicker(){ pickerOverlay.classList.remove('open'); pendingSlot=null; }
+
+  function renderPickerList(){
+    pickerList.innerHTML='';
+    const available = state.roster.filter(p => p.name.trim() && findAssignment(p.id).type===null);
+    if(available.length===0){
+      pickerList.innerHTML = '<div style="font-size:12.5px; color:var(--muted); padding:10px 2px;">Kadroda boşta oyuncu yok. Önce Kadro sekmesinden isim gir ya da başka bir yuvayı boşalt.</div>';
+      return;
+    }
+    available.forEach(p=>{
       const row=document.createElement('div');
-      row.className='pool-row' + (selectedRosterId===p.id ? ' selected' : '');
-      const loc=findAssignment(p.id);
+      row.className='pool-row';
       row.innerHTML =
-        '<div class="pinfo"><div class="pname">'+escapeHtml(p.name || '(boş)')+'</div>'+
-        '<div class="ppos">'+escapeHtml(p.pos||'')+'</div></div>'+
-        '<span class="rtag '+(loc.type==='pitch'?'pitch':loc.type==='bench'?'bench':'free')+'">'+
-        (loc.type==='pitch'?'SAHADA':loc.type==='bench'?'YEDEK':'KADRODA')+'</span>';
+        '<div class="pinfo"><div class="pname">'+escapeHtml(p.name)+'</div>'+
+        '<div class="ppos">'+escapeHtml(p.pos||'')+'</div></div>';
       row.addEventListener('click', ()=>{
-        if(!p.name.trim()) return; // don't allow placing empty slots
-        selectedRosterId = (selectedRosterId===p.id) ? null : p.id;
-        renderPool();
+        if(!pendingSlot) return;
+        unassign(p.id);
+        if(pendingSlot.type==='pitch') state.pitchAssign[pendingSlot.index]=p.id;
+        else state.benchAssign[pendingSlot.index]=p.id;
+        closePicker();
+        renderPitch(); renderBench(); renderKadro(); renderStats();
+        saveState();
       });
-      poolList.appendChild(row);
+      pickerList.appendChild(row);
     });
   }
+
+  pickerClearBtn.addEventListener('click', ()=>{
+    if(!pendingSlot) return;
+    if(pendingSlot.type==='pitch') state.pitchAssign[pendingSlot.index]=null;
+    else state.benchAssign[pendingSlot.index]=null;
+    closePicker();
+    renderPitch(); renderBench(); renderKadro(); renderStats();
+    saveState();
+  });
+  pickerCloseBtn.addEventListener('click', closePicker);
+  pickerOverlay.addEventListener('click', (e)=>{ if(e.target===pickerOverlay) closePicker(); });
 
   function findAssignment(rosterId){
     const pi=state.pitchAssign.indexOf(rosterId);
@@ -700,17 +737,7 @@
     const bi=state.benchAssign.indexOf(rosterId); if(bi!==-1) state.benchAssign[bi]=null;
   }
   function handleSlotClick(type, index){
-    const occupant = type==='pitch' ? state.pitchAssign[index] : state.benchAssign[index];
-    if(selectedRosterId){
-      unassign(selectedRosterId);
-      if(type==='pitch') state.pitchAssign[index]=selectedRosterId; else state.benchAssign[index]=selectedRosterId;
-      selectedRosterId=null;
-    } else if(occupant){
-      unassign(occupant);
-      selectedRosterId=occupant;
-    }
-    renderPitch(); renderBench(); renderPool(); renderKadro(); renderStats();
-    saveState();
+    openPicker(type, index);
   }
   function rosterById(id){ return state.roster.find(p=>p.id===id); }
 
@@ -781,7 +808,7 @@
     renderColors();
     applyLogo();
     renderKadro();
-    renderPitch(); renderBench(); renderPool(); renderStats();
+    renderPitch(); renderBench(); renderStats();
   }
 
   // ---------- persistence: Firestore (cross-device) + localStorage (offline cache) ----------
@@ -863,7 +890,7 @@
         const loaded = JSON.parse(data.data);
         state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
         normalizeState();
-        selectedRosterId = null;
+        
         renderAll();
         const syncStatus = document.getElementById('syncStatus');
         if(syncStatus) syncStatus.textContent = 'Başka bir cihazdan güncellendi ✓';
@@ -896,8 +923,8 @@
   document.getElementById('clearBoardBtn').addEventListener('click', ()=>{
     state.pitchAssign=new Array(countSlots(state.formation)).fill(null);
     state.benchAssign=new Array(state.benchCount).fill(null);
-    selectedRosterId=null;
-    renderPitch(); renderBench(); renderPool(); renderKadro(); renderStats();
+    
+    renderPitch(); renderBench(); renderKadro(); renderStats();
     saveState();
   });
 
