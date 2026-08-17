@@ -144,7 +144,7 @@
   .title-block .fb-code{ font-size:30px; font-weight:700; color:var(--flood); line-height:1; }
   .title-block .team-sub{ font-size:11px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; font-weight:600; }
 
-  .main-grid{ display:grid; grid-template-columns: 2.1fr 1fr; gap:16px; position:relative; z-index:1; }
+  .main-grid{ display:grid; grid-template-columns: 2.5fr 1fr; gap:14px; position:relative; z-index:1; }
   @media (max-width:700px){ .main-grid{ grid-template-columns:1fr; } }
 
   .pitch-outer{
@@ -166,24 +166,25 @@
   .slot.empty .jersey-wrap svg .jbody{ fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.32); stroke-dasharray:4 3; }
   .slot.filled.selected-target .jersey-wrap{ outline:2px solid var(--flood); outline-offset:2px; border-radius:6px; }
 
-  .side-stack{ display:flex; flex-direction:column; gap:12px; }
-  .side-box{ background: rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:12px 14px; }
-  .side-box .sb-title{ font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--chalk); display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
-  .side-box .sb-title small{ font-size:9px; color:var(--muted); font-weight:600; letter-spacing:0.6px; }
+  .side-stack{ display:flex; flex-direction:column; gap:9px; }
+  .side-box{ background: rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.09); border-radius:10px; padding:9px 12px; }
+  .side-box .sb-title{ font-size:10px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase; color:var(--chalk); display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; }
+  .side-box .sb-title small{ font-size:8px; color:var(--muted); font-weight:600; letter-spacing:0.5px; }
 
-  .bench-rows{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:8px 10px; }
-  .bench-row-cap{ display:flex; align-items:center; gap:7px; cursor:pointer; padding:4px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); }
-  .bench-row-cap.selected-target{ background: rgba(199,242,58,0.1); outline:1px solid var(--flood); }
-  .bench-row-cap .bjersey{ width:32px; height:35px; flex-shrink:0; position:relative; }
-  .bench-row-cap .bjersey svg{ width:100%; height:100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
-  .bench-row-cap .binfo{ flex:1; min-width:0; }
-  .bench-row-cap .bname{ font-size:11px; color:var(--chalk); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .bench-row-cap.empty .bname{ color: rgba(255,255,255,0.25); font-weight:500; }
+  .meta-box{ text-align:center; padding:8px 10px; }
+  .meta-label{ font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:var(--flood); margin-bottom:2px; }
+  .meta-value{ font-size:14px; font-weight:700; color:var(--chalk); text-transform:uppercase; letter-spacing:0.2px; line-height:1.25; word-break:break-word; }
 
-  .kb-stats{ display:flex; flex-direction:column; gap:8px; }
-  .kb-stat{ display:flex; align-items:baseline; justify-content:space-between; }
-  .kb-stat .kb-label{ font-size:11.5px; color:var(--muted); font-weight:500; }
-  .kb-stat .kb-num{ font-size:22px; color:var(--flood); font-weight:700; }
+  .numbered-list{ display:flex; flex-direction:column; gap:5px; }
+  .num-row{ display:flex; align-items:center; gap:7px; padding:2px 0; }
+  .num-row .n-idx{ width:14px; flex-shrink:0; font-family:'Teko',sans-serif; font-size:13px; color:var(--muted); text-align:right; }
+  .num-row .n-jersey{ width:22px; height:24px; flex-shrink:0; position:relative; }
+  .num-row .n-jersey svg{ width:100%; height:100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35)); }
+  .num-row .n-info{ flex:1; min-width:0; }
+  .num-row .n-name{ font-size:10.5px; font-weight:700; color:var(--chalk); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; }
+  .num-row .n-pos{ font-size:8.5px; font-weight:600; color:var(--flood); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; letter-spacing:0.3px; }
+  .num-row.empty .n-name{ color:rgba(255,255,255,0.25); font-weight:500; text-transform:none; }
+  .num-row.empty .n-pos{ display:none; }
 
   .footer-tag{ margin-top:14px; text-align:center; font-size:10.5px; color:var(--muted); letter-spacing:1px; position:relative; z-index:1; }
   .footer-tag b{ color:var(--flood); }
@@ -240,9 +241,21 @@
   <div class="tab-panel" id="tab-dizilis">
 
     <div class="dizilis-toolbar">
-      <div class="field" style="margin-bottom:0;">
-        <label>Alt Bilgi (rakip / hafta)</label>
-        <input type="text" id="matchInfo" placeholder="Örn: 5. Hafta vs Yıldızspor">
+      <div class="field" style="margin-bottom:0; max-width:170px;">
+        <label>Rakip</label>
+        <input type="text" id="opponentInput" placeholder="Örn: Yıldızspor">
+      </div>
+      <div class="field" style="margin-bottom:0; max-width:130px;">
+        <label>Tarih</label>
+        <input type="text" id="matchDateInput" placeholder="Örn: 24 Ağustos">
+      </div>
+      <div class="field" style="margin-bottom:0; max-width:100px;">
+        <label>Saat</label>
+        <input type="text" id="matchTimeInput" placeholder="Örn: 20:00">
+      </div>
+      <div class="field" style="margin-bottom:0; max-width:170px;">
+        <label>Stadyum / Saha</label>
+        <input type="text" id="venueInput" placeholder="Örn: Selimiye Stadı">
       </div>
       <div class="field" style="margin-bottom:0;">
         <label>Diziliş</label>
@@ -279,17 +292,25 @@
             </div>
 
             <div class="side-stack">
-              <div class="side-box">
-                <div class="sb-title">YEDEKLER <small id="benchMaxLabel">MAKS 7 KİŞİ</small></div>
-                <div class="bench-rows" id="benchRows"></div>
+              <div class="side-box meta-box" id="opponentBox">
+                <div class="meta-label">RAKİP</div>
+                <div class="meta-value" id="metaOpponent">—</div>
+              </div>
+              <div class="side-box meta-box" id="timeBox">
+                <div class="meta-label">MAÇ SAATİ</div>
+                <div class="meta-value" id="metaTime">—</div>
+              </div>
+              <div class="side-box meta-box" id="venueBox">
+                <div class="meta-label">STADYUM</div>
+                <div class="meta-value" id="metaVenue">—</div>
               </div>
               <div class="side-box">
-                <div class="sb-title">KADRO BİLGİSİ</div>
-                <div class="kb-stats">
-                  <div class="kb-stat"><span class="kb-label">Sahada</span><span class="kb-num" id="kbPitch">0/11</span></div>
-                  <div class="kb-stat"><span class="kb-label">Yedek</span><span class="kb-num" id="kbBench">0/7</span></div>
-                  <div class="kb-stat"><span class="kb-label">Toplam Kadro</span><span class="kb-num" id="kbTotal">0</span></div>
-                </div>
+                <div class="sb-title">İLK 11</div>
+                <div class="numbered-list" id="startersList"></div>
+              </div>
+              <div class="side-box">
+                <div class="sb-title" id="benchTitle">YEDEKLER <small id="benchMaxLabel">(7 KİŞİ)</small></div>
+                <div class="numbered-list" id="benchRows"></div>
               </div>
             </div>
           </div>
@@ -398,7 +419,7 @@
   }
 
   const DEFAULT_STATE = {
-    teamName:"Takımım", matchInfo:"", formation:"4-2-3-1", color:COLORS[0], logo:null,
+    teamName:"Takımım", opponent:"", matchDate:"", matchTime:"", venue:"", formation:"4-2-3-1", color:COLORS[0], logo:null,
     benchCount: 7,
     roster: makeRoster(),
     pitchAssign: new Array(11).fill(null),
@@ -441,22 +462,26 @@
 
   // ---------- refs ----------
   const teamNameInput=document.getElementById('teamName');
-  const matchInfoInput=document.getElementById('matchInfo');
+  const opponentInput=document.getElementById('opponentInput');
+  const matchDateInput=document.getElementById('matchDateInput');
+  const matchTimeInput=document.getElementById('matchTimeInput');
+  const venueInput=document.getElementById('venueInput');
   const colorRow=document.getElementById('colorRow');
   const logoInput=document.getElementById('logoInput');
   const logoPreview=document.getElementById('logoPreview');
   const kadroGrid=document.getElementById('kadroGrid');
   const kadroCount=document.getElementById('kadroCount');
-  
+
   const statusEl=document.getElementById('status');
   const crest=document.getElementById('crest');
   const fbCode=document.getElementById('fbCode');
   const teamSub=document.getElementById('teamSub');
   const slotsLayer=document.getElementById('slotsLayer');
+  const startersList=document.getElementById('startersList');
   const benchRows=document.getElementById('benchRows');
-  const kbPitch=document.getElementById('kbPitch');
-  const kbBench=document.getElementById('kbBench');
-  const kbTotal=document.getElementById('kbTotal');
+  const metaOpponent=document.getElementById('metaOpponent');
+  const metaTime=document.getElementById('metaTime');
+  const metaVenue=document.getElementById('metaVenue');
 
   // ---------- tabs ----------
   document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -597,11 +622,18 @@
     state.teamName=teamNameInput.value||'Takımım';
     updateTeamSub(); saveState();
   });
-  matchInfoInput.addEventListener('input', ()=>{
-    state.matchInfo=matchInfoInput.value; updateTeamSub(); saveState();
-  });
+  opponentInput.addEventListener('input', ()=>{ state.opponent=opponentInput.value; renderMeta(); saveState(); });
+  matchDateInput.addEventListener('input', ()=>{ state.matchDate=matchDateInput.value; renderMeta(); saveState(); });
+  matchTimeInput.addEventListener('input', ()=>{ state.matchTime=matchTimeInput.value; renderMeta(); saveState(); });
+  venueInput.addEventListener('input', ()=>{ state.venue=venueInput.value; renderMeta(); saveState(); });
   function updateTeamSub(){
-    teamSub.textContent = state.matchInfo ? (state.teamName+' — '+state.matchInfo) : state.teamName;
+    teamSub.textContent = state.teamName;
+  }
+  function renderMeta(){
+    metaOpponent.textContent = state.opponent && state.opponent.trim() ? state.opponent : '—';
+    const dt = [state.matchDate, state.matchTime].filter(v=>v && v.trim()).join(' · ');
+    metaTime.textContent = dt || '—';
+    metaVenue.textContent = state.venue && state.venue.trim() ? state.venue : '—';
   }
   formationSelect.addEventListener('change', ()=>{
     state.formation=formationSelect.value;
@@ -617,7 +649,7 @@
     for(let i=0;i<Math.min(n, old.length);i++){ next[i]=old[i]; }
     state.benchAssign = next;
     state.benchCount = n;
-    document.getElementById('benchMaxLabel').textContent = 'MAKS ' + n + ' KİŞİ';
+    document.getElementById('benchMaxLabel').textContent = '(' + n + ' KİŞİ)';
     renderBench(); renderKadro(); renderStats();
     saveState();
   });
@@ -774,37 +806,63 @@
     });
   }
 
+  function renderStarters(){
+    startersList.innerHTML='';
+    const form=FORMATIONS[state.formation];
+    let idx=0;
+    form.lines.forEach(line=>{
+      line.xs.forEach(()=>{
+        const rosterId = state.pitchAssign[idx];
+        const player = rosterId ? rosterById(rosterId) : null;
+        const row=document.createElement('div');
+        row.className='num-row'+(player?'':' empty');
+        row.innerHTML =
+          '<div class="n-idx">'+(idx+1)+'</div>'+
+          '<div class="n-jersey">'+jerseySvg(state.color, state.logo)+'</div>'+
+          '<div class="n-info"><div class="n-name">'+(player?escapeHtml(player.name):'—')+'</div>'+
+          (player && player.pos ? '<div class="n-pos">'+escapeHtml(player.pos)+'</div>' : '')+
+          '</div>';
+        const myIdx=idx;
+        row.addEventListener('click', ()=> handleSlotClick('pitch', myIdx));
+        startersList.appendChild(row);
+        idx++;
+      });
+    });
+  }
+
   function renderBench(){
+    renderStarters();
+    const startersCount = state.pitchAssign.length;
     benchRows.innerHTML='';
     state.benchAssign.forEach((rosterId,i)=>{
       const player=rosterId ? rosterById(rosterId) : null;
       const row=document.createElement('div');
-      row.className='bench-row-cap '+(player?'':'empty');
+      row.className='num-row'+(player?'':' empty');
       row.innerHTML =
-        '<div class="bjersey">'+jerseySvg(state.color, state.logo)+'</div>'+
-        '<div class="binfo"><div class="bname">'+(player?escapeHtml(player.name):'')+'</div></div>';
+        '<div class="n-idx">'+(startersCount+i+1)+'</div>'+
+        '<div class="n-jersey">'+jerseySvg(state.color, state.logo)+'</div>'+
+        '<div class="n-info"><div class="n-name">'+(player?escapeHtml(player.name):'—')+'</div>'+
+        (player && player.pos ? '<div class="n-pos">'+escapeHtml(player.pos)+'</div>' : '')+
+        '</div>';
       row.addEventListener('click', ()=> handleSlotClick('bench', i));
       benchRows.appendChild(row);
     });
   }
 
-  function renderStats(){
-    const pf=state.pitchAssign.filter(Boolean).length;
-    const bf=state.benchAssign.filter(Boolean).length;
-    const tf=state.roster.filter(p=>p.name.trim()).length;
-    kbPitch.textContent=pf+'/'+state.pitchAssign.length;
-    kbBench.textContent=bf+'/'+state.benchAssign.length;
-    kbTotal.textContent=tf;
-  }
+  function renderStats(){ /* no-op: squad summary panel removed in favor of full starters/bench lists */ }
 
   function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
   function renderAll(){
     teamNameInput.value=state.teamName;
-    matchInfoInput.value=state.matchInfo;
+    opponentInput.value=state.opponent||'';
+    matchDateInput.value=state.matchDate||'';
+    matchTimeInput.value=state.matchTime||'';
+    venueInput.value=state.venue||'';
+    renderMeta();
     formationSelect.value=state.formation;
     benchCountSelect.value=state.benchCount;
-    document.getElementById('benchMaxLabel').textContent = 'MAKS ' + state.benchCount + ' KİŞİ';
+    document.getElementById('benchMaxLabel').textContent = '(' + state.benchCount + ' KİŞİ)';
     fbCode.textContent=state.formation;
     updateTeamSub();
     renderColors();
@@ -827,6 +885,10 @@
       for(let i=0;i<Math.min(state.benchCount, old.length);i++){ next[i]=old[i]; }
       state.benchAssign = next;
     }
+    if(state.opponent===undefined) state.opponent='';
+    if(state.matchDate===undefined) state.matchDate='';
+    if(state.matchTime===undefined) state.matchTime='';
+    if(state.venue===undefined) state.venue='';
   }
 
   let saveTimer=null;
