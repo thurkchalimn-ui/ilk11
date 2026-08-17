@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --night: #0A1220; --night-2:#0F1B2E;
@@ -327,6 +329,17 @@
         <input type="file" id="logoInput" accept="image/*">
       </div>
     </div>
+    <div class="field">
+      <label>Takım Kodu (Cihazlar Arası Senkron)</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="teamCodeInput" style="flex:1; text-transform:uppercase;">
+        <button class="btn btn-ghost" id="copyCodeBtn" style="width:auto; padding:0 14px; margin-top:0;">Kopyala</button>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:6px; line-height:1.4;">
+        Bu kodu diğer cihazına (telefon/bilgisayar) da gir — aynı kadro ve diziliş orada da görünür ve güncel kalır.
+      </div>
+      <div class="status" id="syncStatus" style="text-align:left; margin-top:6px;">&nbsp;</div>
+    </div>
     <button class="btn btn-primary modal-close" id="modalCloseBtn">Tamam</button>
   </div>
 </div>
@@ -389,6 +402,36 @@
   let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
   let selectedRosterId = null;
   const STORAGE_KEY = "ilk11-lineup-v3";
+
+  // ---------- Firebase (cross-device sync) ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDj4XhWBPFnDsom2qPU2q41KbOPEI2CaC4",
+    authDomain: "ilkonbir-73979.firebaseapp.com",
+    projectId: "ilkonbir-73979",
+    storageBucket: "ilkonbir-73979.firebasestorage.app",
+    messagingSenderId: "1015600073023",
+    appId: "1:1015600073023:web:76220f0b2731ba49102b8a"
+  };
+  let db = null;
+  let firebaseReady = false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    firebaseReady = true;
+  }catch(e){ console.error('firebase init failed', e); }
+
+  const TEAM_CODE_KEY = 'ilk11-team-code';
+  function getOrCreateTeamCode(){
+    let code = localStorage.getItem(TEAM_CODE_KEY);
+    if(!code){
+      code = Math.random().toString(36).slice(2,8).toUpperCase();
+      localStorage.setItem(TEAM_CODE_KEY, code);
+    }
+    return code;
+  }
+  let teamCode = getOrCreateTeamCode();
+  let lastKnownRaw = null;
+  let unsubscribeSync = null;
 
   // ---------- refs ----------
   const teamNameInput=document.getElementById('teamName');
@@ -741,38 +784,113 @@
     renderPitch(); renderBench(); renderPool(); renderStats();
   }
 
-  // ---------- persistence (browser localStorage — works on any host, incl. Vercel) ----------
+  // ---------- persistence: Firestore (cross-device) + localStorage (offline cache) ----------
+  function normalizeState(){
+    if(!state.roster || state.roster.length!==35) state.roster=makeRoster();
+    state.roster.forEach(p=>{ if(p.pos===undefined) p.pos=''; });
+    if(!state.pitchAssign || state.pitchAssign.length!==countSlots(state.formation)){
+      state.pitchAssign=new Array(countSlots(state.formation)).fill(null);
+    }
+    if(!state.benchCount) state.benchCount = 7;
+    if(!state.benchAssign || state.benchAssign.length!==state.benchCount){
+      const old = state.benchAssign || [];
+      const next = new Array(state.benchCount).fill(null);
+      for(let i=0;i<Math.min(state.benchCount, old.length);i++){ next[i]=old[i]; }
+      state.benchAssign = next;
+    }
+  }
+
   let saveTimer=null;
   function saveState(){
     clearTimeout(saveTimer);
     saveTimer=setTimeout(()=>{
-      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-      catch(e){ console.error('save failed', e); }
+      const raw = JSON.stringify(state);
+      try{ localStorage.setItem(STORAGE_KEY, raw); } catch(e){ console.error('local save failed', e); }
+      lastKnownRaw = raw;
+      const syncStatus = document.getElementById('syncStatus');
+      if(firebaseReady){
+        if(syncStatus) syncStatus.textContent = 'Kaydediliyor...';
+        db.collection('teams').doc(teamCode).set({ data: raw, updatedAt: Date.now() })
+          .then(()=>{ if(syncStatus) syncStatus.textContent = 'Senkronize ✓'; })
+          .catch(e=>{ console.error('firestore save failed', e); if(syncStatus) syncStatus.textContent='Bulut kaydı başarısız, sadece bu cihazda saklandı.'; });
+      }
     }, 450);
   }
+
   async function loadState(){
     statusEl.textContent='Yükleniyor...';
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){
-        const loaded=JSON.parse(raw);
-        state=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
-        if(!state.roster || state.roster.length!==35) state.roster=makeRoster();
-        state.roster.forEach(p=>{ if(p.pos===undefined) p.pos=''; });
-        if(!state.pitchAssign || state.pitchAssign.length!==countSlots(state.formation)){
-          state.pitchAssign=new Array(countSlots(state.formation)).fill(null);
+    let loadedFromCloud = false;
+    if(firebaseReady){
+      try{
+        const docSnap = await db.collection('teams').doc(teamCode).get();
+        if(docSnap.exists && docSnap.data() && docSnap.data().data){
+          const raw = docSnap.data().data;
+          const loaded = JSON.parse(raw);
+          state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
+          normalizeState();
+          lastKnownRaw = raw;
+          loadedFromCloud = true;
         }
-        if(!state.benchCount) state.benchCount = 7;
-        if(!state.benchAssign || state.benchAssign.length!==state.benchCount){
-          const old = state.benchAssign || [];
-          const next = new Array(state.benchCount).fill(null);
-          for(let i=0;i<Math.min(state.benchCount, old.length);i++){ next[i]=old[i]; }
-          state.benchAssign = next;
+      }catch(e){ console.error('firestore load failed', e); }
+    }
+    if(!loadedFromCloud){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){
+          const loaded=JSON.parse(raw);
+          state=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
+          normalizeState();
+          lastKnownRaw = raw;
         }
-      }
-    }catch(e){ /* keep default */ }
+      }catch(e){ /* keep default */ }
+      if(firebaseReady){ saveState(); } // push initial/local state to the cloud under this team code
+    }
     statusEl.textContent='\u00A0';
     renderAll();
+    setupRealtimeSync();
+  }
+
+  function setupRealtimeSync(){
+    if(!firebaseReady) return;
+    if(unsubscribeSync) unsubscribeSync();
+    unsubscribeSync = db.collection('teams').doc(teamCode).onSnapshot(docSnap=>{
+      if(!docSnap.exists) return;
+      const data = docSnap.data();
+      if(!data || !data.data) return;
+      if(data.data === lastKnownRaw) return; // our own write echoing back, ignore
+      lastKnownRaw = data.data;
+      try{
+        const loaded = JSON.parse(data.data);
+        state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
+        normalizeState();
+        selectedRosterId = null;
+        renderAll();
+        const syncStatus = document.getElementById('syncStatus');
+        if(syncStatus) syncStatus.textContent = 'Başka bir cihazdan güncellendi ✓';
+      }catch(e){ console.error('sync apply failed', e); }
+    }, err=>{ console.error('sync listener error', err); });
+  }
+
+  // ---------- team code UI ----------
+  const teamCodeInput = document.getElementById('teamCodeInput');
+  const copyCodeBtn = document.getElementById('copyCodeBtn');
+  if(teamCodeInput){ teamCodeInput.value = teamCode; }
+  if(copyCodeBtn){
+    copyCodeBtn.addEventListener('click', ()=>{
+      navigator.clipboard.writeText(teamCode).then(()=>{
+        copyCodeBtn.textContent='Kopyalandı ✓';
+        setTimeout(()=>{ copyCodeBtn.textContent='Kopyala'; }, 1500);
+      }).catch(()=>{});
+    });
+  }
+  if(teamCodeInput){
+    teamCodeInput.addEventListener('change', ()=>{
+      const newCode = teamCodeInput.value.trim().toUpperCase();
+      if(newCode && newCode !== teamCode){
+        localStorage.setItem(TEAM_CODE_KEY, newCode);
+        location.reload();
+      }
+    });
   }
 
   document.getElementById('clearBoardBtn').addEventListener('click', ()=>{
