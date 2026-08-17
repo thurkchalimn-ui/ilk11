@@ -6,9 +6,7 @@
 <title>Kadro &amp; Diziliş</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
 <style>
   :root{
     --night: #0A1220; --night-2:#0F1B2E;
@@ -348,6 +346,9 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
 (function(){
   const FORMATIONS = {
@@ -845,36 +846,46 @@
   }
 
   async function loadState(){
-    statusEl.textContent='Yükleniyor...';
-    let loadedFromCloud = false;
-    if(firebaseReady){
-      try{
-        const docSnap = await db.collection('teams').doc(teamCode).get();
-        if(docSnap.exists && docSnap.data() && docSnap.data().data){
-          const raw = docSnap.data().data;
-          const loaded = JSON.parse(raw);
-          state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
-          normalizeState();
-          lastKnownRaw = raw;
-          loadedFromCloud = true;
-        }
-      }catch(e){ console.error('firestore load failed', e); }
-    }
-    if(!loadedFromCloud){
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if(raw){
-          const loaded=JSON.parse(raw);
-          state=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
-          normalizeState();
-          lastKnownRaw = raw;
-        }
-      }catch(e){ /* keep default */ }
-      if(firebaseReady){ saveState(); } // push initial/local state to the cloud under this team code
-    }
+    // 1) Render immediately from local cache so the UI never sits blank while waiting on the network.
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const loaded = JSON.parse(raw);
+        state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
+        normalizeState();
+        lastKnownRaw = raw;
+      }
+    }catch(e){ /* keep default */ }
     statusEl.textContent='\u00A0';
     renderAll();
-    setupRealtimeSync();
+
+    // 2) Fetch the cloud copy in the background, with a timeout, and only re-render if it differs.
+    if(firebaseReady){
+      const syncStatus = document.getElementById('syncStatus');
+      if(syncStatus) syncStatus.textContent = 'Bulutla senkronize ediliyor...';
+      const timeout = new Promise((_,rej)=> setTimeout(()=>rej(new Error('timeout')), 6000));
+      Promise.race([ db.collection('teams').doc(teamCode).get(), timeout ])
+        .then(docSnap=>{
+          if(docSnap && docSnap.exists && docSnap.data() && docSnap.data().data){
+            const raw = docSnap.data().data;
+            if(raw !== lastKnownRaw){
+              const loaded = JSON.parse(raw);
+              state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
+              normalizeState();
+              lastKnownRaw = raw;
+              renderAll();
+            }
+            if(syncStatus) syncStatus.textContent = 'Senkronize ✓';
+          } else {
+            saveState(); // no cloud doc yet under this code — push current local state as the first copy
+          }
+        })
+        .catch(e=>{
+          console.error('firestore load failed/timeout', e);
+          if(syncStatus) syncStatus.textContent = 'Bulut yanıt vermedi, bu cihazdaki veriyle devam ediliyor.';
+        })
+        .finally(()=>{ setupRealtimeSync(); });
+    }
   }
 
   function setupRealtimeSync(){
