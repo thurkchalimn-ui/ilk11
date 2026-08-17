@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kadro &amp; Diziliş</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --night: #0A1220; --night-2:#0F1B2E;
+    --pitch: #12432a; --pitch-2: #17552f;
+    --line: rgba(245,245,240,0.6);
+    --chalk: #F2F4EC; --flood:#C7F23A; --flood-dim:rgba(199,242,58,0.35);
+    --muted:#8AA0A8; --panel:#101B2C; --panel-2:#16243A; --gk:#2E8B57;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:16px;
+    background: radial-gradient(1200px 800px at 20% -10%, #16273f 0%, var(--night) 55%), var(--night);
+    font-family:'Archivo', sans-serif; color:var(--chalk); min-height:100vh;
+  }
+  h1,h2, .fb-code, .kb-num{ font-family:'Teko', sans-serif; }
+
+  .shell{ max-width:1300px; margin:0 auto; }
+
+  /* topbar */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
+  .brand{ display:flex; align-items:baseline; gap:8px; }
+  .brand .dot{ width:9px; height:9px; border-radius:50%; background:var(--flood); box-shadow:0 0 10px var(--flood); }
+  .brand h1{ font-size:24px; font-weight:600; margin:0; letter-spacing:0.5px; text-transform:uppercase; }
+  .tabs{ display:flex; gap:6px; background:var(--panel); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:4px; }
+  .tab-btn{
+    padding:8px 18px; border-radius:7px; border:none; background:transparent; color:var(--muted);
+    font-family:'Teko',sans-serif; font-size:17px; letter-spacing:0.5px; cursor:pointer; text-transform:uppercase; font-weight:600;
+  }
+  .tab-btn.active{ background:var(--flood); color:#0A1220; }
+  .gear-btn{
+    width:38px; height:38px; border-radius:9px; border:1px solid rgba(255,255,255,0.12); background:var(--panel);
+    color:var(--chalk); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
+  }
+  .gear-btn:hover{ border-color:var(--flood); color:var(--flood); }
+
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  /* ============ KADRO TAB ============ */
+  .kadro-card{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:20px;
+  }
+  .kadro-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; flex-wrap:wrap; gap:6px;}
+  .kadro-head h2{ font-size:26px; font-weight:600; margin:0; text-transform:uppercase; letter-spacing:0.5px; }
+  .kadro-sub{ font-size:12.5px; color:var(--muted); margin-bottom:16px; }
+  .kadro-sub b{ color:var(--flood); }
+  .kadro-count{ font-family:'Teko',sans-serif; font-size:18px; color:var(--flood); }
+
+  .kadro-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:8px;
+  }
+  .kadro-row{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px;
+    background: rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06);
+  }
+  .kadro-row .kidx{ width:20px; text-align:center; font-family:'Teko',sans-serif; font-size:15px; color:var(--muted); flex-shrink:0; }
+  .kadro-row .kdot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; background: rgba(255,255,255,0.15); }
+  .kadro-row .kdot.pitch{ background: var(--flood); }
+  .kadro-row .kdot.bench{ background: #7fb2ff; }
+  .kadro-row input.kname{ flex:1.3; min-width:0; padding:7px 8px; font-size:13px; }
+  .kadro-row input.kpos{ flex:1; min-width:0; padding:7px 8px; font-size:12px; }
+  input[type=text]{
+    background: rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.1); color:var(--chalk);
+    border-radius:7px; font-family:'Archivo',sans-serif; outline:none;
+  }
+  input[type=text]:focus{ border-color: var(--flood); }
+
+  /* ============ DIZILIS TAB ============ */
+  .dizilis-toolbar{
+    display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px 16px; margin-bottom:14px;
+  }
+  .dizilis-toolbar .field{ flex:1 1 180px; min-width:160px; }
+  .dizilis-toolbar .btn{ flex:0 0 auto; width:auto; padding:10px 20px; }
+  .dizilis-toolbar .status{ flex:0 0 auto; margin:0; }
+  @media (max-width:700px){ .dizilis-toolbar .btn{ flex:1 1 140px; } }
+
+  .dizilis-grid{ display:grid; grid-template-columns: 260px 1fr; gap:16px; }
+  @media (max-width:980px){ .dizilis-grid{ grid-template-columns:1fr; } }
+
+  .pool-panel{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px;
+    height: fit-content; max-height: calc(100vh - 140px); overflow-y:auto;
+  }
+  .pool-panel h3{ font-size:12px; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted); margin:0 0 8px; }
+  .hint-box{
+    background: rgba(199,242,58,0.08); border:1px solid rgba(199,242,58,0.25); border-radius:9px;
+    padding:8px 9px; font-size:11.5px; line-height:1.4; color:#dbeb9c; margin-bottom:12px;
+  }
+  .hint-box b{ color:var(--flood); }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:10.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted); margin-bottom:5px; font-weight:600; }
+  select{
+    width:100%; background: rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.1); color:var(--chalk);
+    padding:8px 9px; border-radius:8px; font-size:13.5px; outline:none; appearance:none; cursor:pointer;
+  }
+  .btn{
+    width:100%; padding:10px 14px; border-radius:9px; border:none; cursor:pointer;
+    font-family:'Teko', sans-serif; font-size:17px; letter-spacing:0.5px; font-weight:600;
+    text-transform:uppercase;
+  }
+  .btn-primary{ background:var(--flood); color:#0A1220; }
+  .btn-ghost{ background:transparent; border:1px solid rgba(255,255,255,0.15); color:var(--chalk); margin-top:8px; }
+  .btn-ghost:hover{ border-color:var(--flood); color:var(--flood); }
+  .status{ font-size:11px; color:var(--muted); text-align:center; margin-top:7px; min-height:14px; }
+
+  .pool-list{ display:flex; flex-direction:column; gap:4px; }
+  .pool-row{
+    display:flex; align-items:center; gap:6px; padding:5px 6px; border-radius:7px; cursor:pointer;
+    border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02);
+  }
+  .pool-row:hover{ background:rgba(255,255,255,0.05); }
+  .pool-row.selected{ border-color:var(--flood); background:rgba(199,242,58,0.08); }
+  .pool-row .pinfo{ flex:1; min-width:0; }
+  .pool-row .pname{ font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pool-row .ppos{ font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pool-row .rtag{ font-size:8.5px; padding:2px 6px; border-radius:10px; font-weight:700; letter-spacing:0.3px; flex-shrink:0; }
+  .rtag.free{ background: rgba(255,255,255,0.06); color:var(--muted); }
+  .rtag.pitch{ background: rgba(199,242,58,0.18); color:var(--flood); }
+  .rtag.bench{ background: rgba(70,150,255,0.18); color:#7fb2ff; }
+
+  /* capture */
+  .capture-wrap{ background: linear-gradient(180deg, #0b1424, #060c16); border-radius:14px; padding:4px; border:1px solid rgba(255,255,255,0.06); }
+  .capture{ background: linear-gradient(160deg, #0d1930 0%, #0a1220 60%, #091018 100%); border-radius:12px; padding:20px; position:relative; overflow:hidden; }
+
+  .header-row{ display:flex; align-items:center; gap:16px; margin-bottom:16px; position:relative; z-index:1; }
+  .crest{
+    width:64px; height:64px; border-radius:50%; background: rgba(255,255,255,0.04); border:2px solid rgba(255,255,255,0.15);
+    flex-shrink:0; background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center;
+    font-family:'Teko',sans-serif; font-size:22px; color:var(--flood);
+  }
+  .title-block h2{ font-size:32px; font-weight:700; letter-spacing:1px; margin:0; line-height:0.95; text-transform:uppercase; }
+  .title-block .fb-code{ font-size:30px; font-weight:700; color:var(--flood); line-height:1; }
+  .title-block .team-sub{ font-size:11px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; font-weight:600; }
+
+  .main-grid{ display:grid; grid-template-columns: 2.1fr 1fr; gap:16px; position:relative; z-index:1; }
+  @media (max-width:700px){ .main-grid{ grid-template-columns:1fr; } }
+
+  .pitch-outer{
+    position:relative; width:100%; aspect-ratio: 4/3.3;
+    border-radius: 8px; overflow:hidden;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+  }
+  .pitch-outer svg.pitch-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+  .slots-layer{ position:absolute; inset:0; }
+  .slot{ position:absolute; transform:translate(-50%,-50%); width:88px; text-align:center; cursor:pointer; }
+  .jersey-wrap{ position:relative; width:58px; height:63px; margin:0 auto; }
+  .jersey-wrap svg{ width:100%; height:100%; display:block; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+  .slot .jname{
+    margin-top:4px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.2px;
+    background: rgba(8,16,12,0.82); border:1px solid rgba(255,255,255,0.12); border-radius:5px; padding:2px 5px;
+    color: var(--chalk); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .slot.empty .jersey-wrap svg .jbody{ fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.32); stroke-dasharray:4 3; }
+  .slot.filled.selected-target .jersey-wrap{ outline:2px solid var(--flood); outline-offset:2px; border-radius:6px; }
+
+  .side-stack{ display:flex; flex-direction:column; gap:12px; }
+  .side-box{ background: rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:12px 14px; }
+  .side-box .sb-title{ font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--chalk); display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .side-box .sb-title small{ font-size:9px; color:var(--muted); font-weight:600; letter-spacing:0.6px; }
+
+  .bench-rows{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:8px 10px; }
+  .bench-row-cap{ display:flex; align-items:center; gap:7px; cursor:pointer; padding:4px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); }
+  .bench-row-cap.selected-target{ background: rgba(199,242,58,0.1); outline:1px solid var(--flood); }
+  .bench-row-cap .bjersey{ width:32px; height:35px; flex-shrink:0; position:relative; }
+  .bench-row-cap .bjersey svg{ width:100%; height:100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+  .bench-row-cap .binfo{ flex:1; min-width:0; }
+  .bench-row-cap .bname{ font-size:11px; color:var(--chalk); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bench-row-cap.empty .bname{ color: rgba(255,255,255,0.25); font-weight:500; }
+
+  .kb-stats{ display:flex; flex-direction:column; gap:8px; }
+  .kb-stat{ display:flex; align-items:baseline; justify-content:space-between; }
+  .kb-stat .kb-label{ font-size:11.5px; color:var(--muted); font-weight:500; }
+  .kb-stat .kb-num{ font-size:22px; color:var(--flood); font-weight:700; }
+
+  .footer-tag{ margin-top:14px; text-align:center; font-size:10.5px; color:var(--muted); letter-spacing:1px; position:relative; z-index:1; }
+  .footer-tag b{ color:var(--flood); }
+
+  /* settings modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel)); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; padding:20px; width:100%; max-width:360px;
+  }
+  .modal h3{ margin:0 0 14px; font-size:20px; font-family:'Teko',sans-serif; letter-spacing:0.5px; text-transform:uppercase; }
+  .color-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .swatch{ width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid rgba(255,255,255,0.15); }
+  .swatch.active{ border-color:var(--flood); box-shadow:0 0 0 2px rgba(199,242,58,0.25); }
+  .logo-upload{ display:flex; align-items:center; gap:10px; }
+  .logo-preview{
+    width:44px; height:44px; border-radius:50%; background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    background-size:cover; background-position:center; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:var(--muted);
+  }
+  .logo-upload input[type=file]{ font-size:11px; color:var(--muted); max-width:190px; }
+  .modal-close{ margin-top:14px; width:100%; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand"><div class="dot"></div><h1>Kadro &amp; Diziliş</h1></div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="kadro">Kadro</button>
+      <button class="tab-btn" data-tab="dizilis">Diziliş</button>
+    </div>
+    <button class="gear-btn" id="gearBtn" title="Takım Ayarları">⚙</button>
+  </div>
+
+  <!-- ============ KADRO TAB ============ -->
+  <div class="tab-panel active" id="tab-kadro">
+    <div class="kadro-card">
+      <div class="kadro-head">
+        <h2>Kadro Listesi</h2>
+        <span class="kadro-count" id="kadroCount">0/35 dolu</span>
+      </div>
+      <div class="kadro-sub">Tüm oyuncularını <b>bir kez</b> buraya gir — isim ve mevki kalıcı olarak saklanır. Diziliş sekmesinde bu kadrodan seçip sahaya/yedeğe yerleştireceksin.</div>
+      <div class="kadro-grid" id="kadroGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============ DIZILIS TAB ============ -->
+  <div class="tab-panel" id="tab-dizilis">
+
+    <div class="dizilis-toolbar">
+      <div class="field" style="margin-bottom:0;">
+        <label>Alt Bilgi (rakip / hafta)</label>
+        <input type="text" id="matchInfo" placeholder="Örn: 5. Hafta vs Yıldızspor">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Diziliş</label>
+        <select id="formation"></select>
+      </div>
+      <div class="field" style="margin-bottom:0; max-width:130px;">
+        <label>Yedek Sayısı</label>
+        <select id="benchCount"></select>
+      </div>
+      <button class="btn btn-primary" id="exportBtn">⬇ PNG Olarak İndir</button>
+      <button class="btn btn-ghost" id="clearBoardBtn">Sahayı Temizle</button>
+      <div class="status" id="status">&nbsp;</div>
+    </div>
+
+    <div class="dizilis-grid">
+
+      <div class="pool-panel">
+        <div class="hint-box">Kadrodan bir <b>oyuncuya dokun</b>, sonra sahada ya da yedek listesinde bir <b>yuvaya dokun</b>. Dolu yuvaya dokunursan oyuncu kadroya döner.</div>
+        <h3>Kadro Havuzu</h3>
+        <div class="pool-list" id="poolList"></div>
+      </div>
+
+      <div class="capture-wrap">
+        <div class="capture" id="captureArea">
+          <div class="header-row">
+            <div class="crest" id="crest">+</div>
+            <div class="title-block">
+              <h2>DİZİLİŞ</h2>
+              <div class="fb-code" id="fbCode">4-2-3-1</div>
+              <div class="team-sub" id="teamSub">Takımım</div>
+            </div>
+          </div>
+
+          <div class="main-grid">
+            <div class="pitch-frame">
+              <div class="pitch-outer" id="pitchOuter">
+                <div class="slots-layer" id="slotsLayer"></div>
+              </div>
+            </div>
+
+            <div class="side-stack">
+              <div class="side-box">
+                <div class="sb-title">YEDEKLER <small id="benchMaxLabel">MAKS 7 KİŞİ</small></div>
+                <div class="bench-rows" id="benchRows"></div>
+              </div>
+              <div class="side-box">
+                <div class="sb-title">KADRO BİLGİSİ</div>
+                <div class="kb-stats">
+                  <div class="kb-stat"><span class="kb-label">Sahada</span><span class="kb-num" id="kbPitch">0/11</span></div>
+                  <div class="kb-stat"><span class="kb-label">Yedek</span><span class="kb-num" id="kbBench">0/7</span></div>
+                  <div class="kb-stat"><span class="kb-label">Toplam Kadro</span><span class="kb-num" id="kbTotal">0</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-tag">Mental Performans <b>·</b> tahminserisi.com</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- settings modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>Takım Ayarları</h3>
+    <div class="field">
+      <label>Takım Adı</label>
+      <input type="text" id="teamName" value="Takımım">
+    </div>
+    <div class="field">
+      <label>Forma Rengi</label>
+      <div class="color-row" id="colorRow"></div>
+    </div>
+    <div class="field">
+      <label>Logo</label>
+      <div class="logo-upload">
+        <div class="logo-preview" id="logoPreview">Logo</div>
+        <input type="file" id="logoInput" accept="image/*">
+      </div>
+    </div>
+    <button class="btn btn-primary modal-close" id="modalCloseBtn">Tamam</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const FORMATIONS = {
+    "4-2-3-1": { roles:["KL","DF","OS","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:75,xs:[15,38,62,85]}, {y:58,xs:[35,65]}, {y:38,xs:[15,50,85]}, {y:14,xs:[50]}
+    ]},
+    "4-3-3": { roles:["KL","DF","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:75,xs:[15,38,62,85]}, {y:52,xs:[30,50,70]}, {y:16,xs:[15,50,85]}
+    ]},
+    "4-4-2": { roles:["KL","DF","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:75,xs:[15,38,62,85]}, {y:50,xs:[15,38,62,85]}, {y:16,xs:[35,65]}
+    ]},
+    "4-1-4-1": { roles:["KL","DF","OS","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:76,xs:[15,38,62,85]}, {y:60,xs:[50]}, {y:40,xs:[15,38,62,85]}, {y:14,xs:[50]}
+    ]},
+    "4-5-1": { roles:["KL","DF","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:76,xs:[15,38,62,85]}, {y:50,xs:[10,30,50,70,90]}, {y:14,xs:[50]}
+    ]},
+    "3-5-2": { roles:["KL","DF","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:75,xs:[25,50,75]}, {y:48,xs:[10,30,50,70,90]}, {y:16,xs:[35,65]}
+    ]},
+    "3-4-3": { roles:["KL","DF","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:75,xs:[25,50,75]}, {y:52,xs:[15,38,62,85]}, {y:16,xs:[15,50,85]}
+    ]},
+    "5-3-2": { roles:["KL","DF","OS","FV"], lines:[
+      {y:92,xs:[50]}, {y:75,xs:[8,27,50,73,92]}, {y:50,xs:[25,50,75]}, {y:16,xs:[35,65]}
+    ]}
+  };
+
+  const COLORS = ["#14213D","#1D4ED8","#E64A3B","#F2C230","#22A559","#F2843A","#1A1A1A","#7C3AED"];
+
+  const formationSelect = document.getElementById('formation');
+  Object.keys(FORMATIONS).forEach(f=>{
+    const o=document.createElement('option'); o.value=f; o.textContent=f; formationSelect.appendChild(o);
+  });
+
+  const benchCountSelect = document.getElementById('benchCount');
+  for(let i=1;i<=20;i++){
+    const o=document.createElement('option'); o.value=i; o.textContent=i+' yedek'; benchCountSelect.appendChild(o);
+  }
+
+  function makeRoster(){
+    const arr=[];
+    for(let i=1;i<=35;i++){ arr.push({ id:'p'+i, name:'', pos:'' }); }
+    return arr;
+  }
+
+  const DEFAULT_STATE = {
+    teamName:"Takımım", matchInfo:"", formation:"4-2-3-1", color:COLORS[0], logo:null,
+    benchCount: 7,
+    roster: makeRoster(),
+    pitchAssign: new Array(11).fill(null),
+    benchAssign: new Array(7).fill(null)
+  };
+
+  let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  let selectedRosterId = null;
+  const STORAGE_KEY = "ilk11-lineup-v3";
+
+  // ---------- refs ----------
+  const teamNameInput=document.getElementById('teamName');
+  const matchInfoInput=document.getElementById('matchInfo');
+  const colorRow=document.getElementById('colorRow');
+  const logoInput=document.getElementById('logoInput');
+  const logoPreview=document.getElementById('logoPreview');
+  const kadroGrid=document.getElementById('kadroGrid');
+  const kadroCount=document.getElementById('kadroCount');
+  const poolList=document.getElementById('poolList');
+  const statusEl=document.getElementById('status');
+  const crest=document.getElementById('crest');
+  const fbCode=document.getElementById('fbCode');
+  const teamSub=document.getElementById('teamSub');
+  const slotsLayer=document.getElementById('slotsLayer');
+  const benchRows=document.getElementById('benchRows');
+  const kbPitch=document.getElementById('kbPitch');
+  const kbBench=document.getElementById('kbBench');
+  const kbTotal=document.getElementById('kbTotal');
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- settings modal ----------
+  const modalOverlay=document.getElementById('modalOverlay');
+  document.getElementById('gearBtn').addEventListener('click', ()=> modalOverlay.classList.add('open'));
+  document.getElementById('modalCloseBtn').addEventListener('click', ()=> modalOverlay.classList.remove('open'));
+  modalOverlay.addEventListener('click', (e)=>{ if(e.target===modalOverlay) modalOverlay.classList.remove('open'); });
+
+  // ---------- pitch background (SVG, trapezoid perspective) ----------
+  // trapezoid edges: top 13%-87%, bottom 0%-100%
+  function leftEdge(y){ return 13*(1-y/100); }
+  function rightEdge(y){ return 87+13*(y/100); }
+  function fieldWidth(y){ return rightEdge(y)-leftEdge(y); }
+  function scaledX(x,y){ return leftEdge(y) + (x/100)*fieldWidth(y); }
+
+  function buildPitchSvg(){
+    const stripes = [];
+    for(let y=0; y<100; y+=6.2){
+      if(Math.floor(y/6.2)%2===0){
+        stripes.push('<rect x="0" y="'+y+'" width="100" height="6.2" fill="#0f8a40"/>');
+      }
+    }
+    const pb_t=[ [scaledX(37,0),0], [scaledX(63,0),0], [scaledX(63,16),16], [scaledX(37,16),16] ];
+    const sb_t=[ [scaledX(43,0),0], [scaledX(57,0),0], [scaledX(57,6),6], [scaledX(43,6),6] ];
+    const pb_b=[ [scaledX(20,84),84], [scaledX(80,84),84], [scaledX(80,100),100], [scaledX(20,100),100] ];
+    const sb_b=[ [scaledX(35,94),94], [scaledX(65,94),94], [scaledX(65,100),100], [scaledX(35,100),100] ];
+    const toPts = a => a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+    const cx=scaledX(50,52), lY=52, hw=fieldWidth(52)*0.11, hh=fieldWidth(52)*0.11*0.62;
+
+    return '<svg class="pitch-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<clipPath id="pitchClip"><polygon points="13,0 87,0 100,100 0,100"/></clipPath>' +
+        '<radialGradient id="grassLight" cx="50%" cy="8%" r="90%">' +
+          '<stop offset="0%" stop-color="#fff" stop-opacity="0.16"/>' +
+          '<stop offset="45%" stop-color="#fff" stop-opacity="0.04"/>' +
+          '<stop offset="100%" stop-color="#000" stop-opacity="0.28"/>' +
+        '</radialGradient>' +
+        '<linearGradient id="grassBase" x1="0%" y1="0%" x2="0%" y2="100%">' +
+          '<stop offset="0%" stop-color="#0b6a34"/>' +
+          '<stop offset="55%" stop-color="#0c7a3b"/>' +
+          '<stop offset="100%" stop-color="#0a5e2f"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      '<polygon points="13,0 87,0 100,100 0,100" fill="url(#grassBase)"/>' +
+      '<g clip-path="url(#pitchClip)" opacity="0.55">' + stripes.join('') + '</g>' +
+      '<polygon points="13,0 87,0 100,100 0,100" fill="url(#grassLight)"/>' +
+      '<g fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="0.5">' +
+        '<polygon points="13,0 87,0 100,100 0,100"/>' +
+        '<line x1="'+leftEdge(52)+'" y1="52" x2="'+rightEdge(52)+'" y2="52"/>' +
+        '<ellipse cx="'+cx+'" cy="'+lY+'" rx="'+hw+'" ry="'+hh+'"/>' +
+        '<polygon points="'+toPts(pb_t)+'"/>' +
+        '<polygon points="'+toPts(sb_t)+'"/>' +
+        '<polygon points="'+toPts(pb_b)+'"/>' +
+        '<polygon points="'+toPts(sb_b)+'"/>' +
+      '</g>' +
+      '<circle cx="'+cx+'" cy="'+lY+'" r="0.5" fill="rgba(255,255,255,0.7)"/>' +
+      '<g stroke="rgba(255,255,255,0.5)" stroke-width="0.15">' +
+        (()=>{ let net=''; const gy0=0, gy1=6, gxL=scaledX(41,0), gxR=scaledX(59,0);
+          for(let i=0;i<=8;i++){ const gx=gxL+(gxR-gxL)*(i/8); net+='<line x1="'+gx+'" y1="'+gy0+'" x2="'+gx+'" y2="'+gy1+'"/>'; }
+          return net; })() +
+      '</g>' +
+    '</svg>';
+  }
+
+  // ---------- jersey svg ----------
+  function jerseySvg(color, crestUrl){
+    const uid = 'c'+Math.random().toString(36).slice(2,8);
+    const BODY_D = "M30 6 L11 21 L21 36 L28 30 L28 92 L72 92 L72 30 L79 36 L89 21 L70 6 L59 13 Q50 20 41 13 Z";
+    let crest;
+    if(crestUrl){
+      // top-left chest placement, small and fully clipped so it never pokes past the jersey outline
+      crest = '<defs><clipPath id="'+uid+'cr"><circle cx="39" cy="32" r="7.5"/></clipPath></defs>' +
+        '<circle cx="39" cy="32" r="8.5" fill="#fff"/>' +
+        '<image href="'+crestUrl+'" x="31.5" y="24.5" width="15" height="15" clip-path="url(#'+uid+'cr)" preserveAspectRatio="xMidYMid slice"/>';
+    } else {
+      crest = '<circle cx="39" cy="32" r="5" fill="rgba(255,255,255,0.3)"/>';
+    }
+    return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<clipPath id="'+uid+'body"><path d="'+BODY_D+'"/></clipPath>' +
+        '<linearGradient id="'+uid+'g" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="#fff" stop-opacity="0.28"/>' +
+          '<stop offset="30%" stop-color="#fff" stop-opacity="0.03"/>' +
+          '<stop offset="70%" stop-color="#000" stop-opacity="0.05"/>' +
+          '<stop offset="100%" stop-color="#000" stop-opacity="0.3"/>' +
+        '</linearGradient>' +
+        '<pattern id="'+uid+'weave" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+          '<line x1="0" y1="0" x2="0" y2="6" stroke="#000" stroke-opacity="0.06" stroke-width="1.4"/>' +
+        '</pattern>' +
+      '</defs>' +
+      '<path class="jbody" d="'+BODY_D+'" fill="'+color+'" stroke="rgba(0,0,0,0.35)" stroke-width="1.2"/>' +
+      '<rect x="8" y="4" width="84" height="90" fill="url(#'+uid+'weave)" clip-path="url(#'+uid+'body)"/>' +
+      '<rect x="8" y="4" width="84" height="90" fill="url(#'+uid+'g)" clip-path="url(#'+uid+'body)"/>' +
+      /* ribbed collar band */
+      '<path d="M41 13 Q50 20 59 13 L58 10 Q50 16.5 42 10 Z" fill="#fff" fill-opacity="0.92"/>' +
+      '<path d="M41 13 Q50 20 59 13" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="0.6"/>' +
+      /* shoulder seams */
+      '<path d="M30 6 L41 13" stroke="rgba(0,0,0,0.22)" stroke-width="0.8" fill="none"/>' +
+      '<path d="M70 6 L59 13" stroke="rgba(0,0,0,0.22)" stroke-width="0.8" fill="none"/>' +
+      /* three-stripe sleeve trim (left sleeve) */
+      '<line x1="14" y1="23" x2="19" y2="29" stroke="#fff" stroke-width="1.7"/>' +
+      '<line x1="17" y1="26.5" x2="22" y2="32.5" stroke="#fff" stroke-width="1.7"/>' +
+      '<line x1="20" y1="30" x2="25" y2="36" stroke="#fff" stroke-width="1.7"/>' +
+      /* three-stripe sleeve trim (right sleeve, mirrored) */
+      '<line x1="86" y1="23" x2="81" y2="29" stroke="#fff" stroke-width="1.7"/>' +
+      '<line x1="83" y1="26.5" x2="78" y2="32.5" stroke="#fff" stroke-width="1.7"/>' +
+      '<line x1="80" y1="30" x2="75" y2="36" stroke="#fff" stroke-width="1.7"/>' +
+      /* sleeve cuff rim */
+      '<path d="M11 21 L21 36" stroke="rgba(255,255,255,0.7)" stroke-width="1.3" fill="none"/>' +
+      '<path d="M89 21 L79 36" stroke="rgba(255,255,255,0.7)" stroke-width="1.3" fill="none"/>' +
+      /* subtle side seams */
+      '<line x1="33" y1="34" x2="33" y2="88" stroke="rgba(0,0,0,0.14)" stroke-width="1.1"/>' +
+      '<line x1="67" y1="34" x2="67" y2="88" stroke="rgba(0,0,0,0.14)" stroke-width="1.1"/>' +
+      /* hem rib */
+      '<line x1="28" y1="90.5" x2="72" y2="90.5" stroke="rgba(0,0,0,0.2)" stroke-width="1.4"/>' +
+      crest + '</svg>';
+  }
+
+  // ---------- colors ----------
+  COLORS.forEach(c=>{
+    const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=c; sw.dataset.hex=c;
+    sw.addEventListener('click', ()=>{ state.color=c; renderColors(); renderPitch(); renderBench(); renderPool(); saveState(); });
+    colorRow.appendChild(sw);
+  });
+  function renderColors(){ [...colorRow.children].forEach(sw=> sw.classList.toggle('active', sw.dataset.hex===state.color)); }
+
+  // ---------- top-level inputs ----------
+  teamNameInput.addEventListener('input', ()=>{
+    state.teamName=teamNameInput.value||'Takımım';
+    updateTeamSub(); saveState();
+  });
+  matchInfoInput.addEventListener('input', ()=>{
+    state.matchInfo=matchInfoInput.value; updateTeamSub(); saveState();
+  });
+  function updateTeamSub(){
+    teamSub.textContent = state.matchInfo ? (state.teamName+' — '+state.matchInfo) : state.teamName;
+  }
+  formationSelect.addEventListener('change', ()=>{
+    state.formation=formationSelect.value;
+    state.pitchAssign = new Array(countSlots(state.formation)).fill(null);
+    fbCode.textContent=state.formation;
+    renderPitch(); renderBench(); renderPool(); renderKadro(); renderStats();
+    saveState();
+  });
+  benchCountSelect.addEventListener('change', ()=>{
+    const n = parseInt(benchCountSelect.value,10);
+    const old = state.benchAssign;
+    const next = new Array(n).fill(null);
+    for(let i=0;i<Math.min(n, old.length);i++){ next[i]=old[i]; }
+    state.benchAssign = next;
+    state.benchCount = n;
+    document.getElementById('benchMaxLabel').textContent = 'MAKS ' + n + ' KİŞİ';
+    renderBench(); renderPool(); renderKadro(); renderStats();
+    saveState();
+  });
+  logoInput.addEventListener('change',(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{ state.logo=reader.result; applyLogo(); renderPitch(); renderBench(); saveState(); };
+    reader.readAsDataURL(file);
+  });
+  function applyLogo(){
+    if(state.logo){
+      crest.style.backgroundImage='url('+state.logo+')'; crest.textContent='';
+      logoPreview.style.backgroundImage='url('+state.logo+')'; logoPreview.textContent='';
+    } else {
+      crest.style.backgroundImage=''; crest.textContent='+';
+      logoPreview.style.backgroundImage=''; logoPreview.textContent='Logo';
+    }
+  }
+  function countSlots(f){ return FORMATIONS[f].lines.reduce((s,l)=>s+l.xs.length,0); }
+
+  // ---------- Kadro tab (bulk entry, permanent) ----------
+  function renderKadro(){
+    kadroGrid.innerHTML='';
+    let filled=0;
+    state.roster.forEach((p, idx)=>{
+      if(p.name.trim()) filled++;
+      const loc = findAssignment(p.id);
+      const row=document.createElement('div'); row.className='kadro-row';
+
+      const idxEl=document.createElement('div'); idxEl.className='kidx'; idxEl.textContent=idx+1;
+
+      const dot=document.createElement('div');
+      dot.className='kdot' + (loc.type==='pitch' ? ' pitch' : loc.type==='bench' ? ' bench' : '');
+
+      const nameIn=document.createElement('input');
+      nameIn.type='text'; nameIn.className='kname'; nameIn.placeholder='Oyuncu adı';
+      nameIn.value=p.name;
+      nameIn.addEventListener('input', ()=>{
+        p.name=nameIn.value;
+        renderPitch(); renderBench(); renderPool(); renderStats();
+        kadroCount.textContent = state.roster.filter(r=>r.name.trim()).length + '/35 dolu';
+        saveState();
+      });
+
+      const posIn=document.createElement('input');
+      posIn.type='text'; posIn.className='kpos'; posIn.placeholder='Mevki (örn: Sol Bek)';
+      posIn.value=p.pos;
+      posIn.addEventListener('input', ()=>{ p.pos=posIn.value; renderPitch(); renderBench(); renderPool(); saveState(); });
+
+      row.appendChild(idxEl); row.appendChild(dot); row.appendChild(nameIn); row.appendChild(posIn);
+      kadroGrid.appendChild(row);
+    });
+    kadroCount.textContent = filled + '/35 dolu';
+  }
+
+  // ---------- pool (Diziliş tab, compact, same roster) ----------
+  function renderPool(){
+    poolList.innerHTML='';
+    state.roster.forEach(p=>{
+      const row=document.createElement('div');
+      row.className='pool-row' + (selectedRosterId===p.id ? ' selected' : '');
+      const loc=findAssignment(p.id);
+      row.innerHTML =
+        '<div class="pinfo"><div class="pname">'+escapeHtml(p.name || '(boş)')+'</div>'+
+        '<div class="ppos">'+escapeHtml(p.pos||'')+'</div></div>'+
+        '<span class="rtag '+(loc.type==='pitch'?'pitch':loc.type==='bench'?'bench':'free')+'">'+
+        (loc.type==='pitch'?'SAHADA':loc.type==='bench'?'YEDEK':'KADRODA')+'</span>';
+      row.addEventListener('click', ()=>{
+        if(!p.name.trim()) return; // don't allow placing empty slots
+        selectedRosterId = (selectedRosterId===p.id) ? null : p.id;
+        renderPool();
+      });
+      poolList.appendChild(row);
+    });
+  }
+
+  function findAssignment(rosterId){
+    const pi=state.pitchAssign.indexOf(rosterId);
+    if(pi!==-1) return {type:'pitch', index:pi};
+    const bi=state.benchAssign.indexOf(rosterId);
+    if(bi!==-1) return {type:'bench', index:bi};
+    return {type:null, index:-1};
+  }
+  function unassign(rosterId){
+    const pi=state.pitchAssign.indexOf(rosterId); if(pi!==-1) state.pitchAssign[pi]=null;
+    const bi=state.benchAssign.indexOf(rosterId); if(bi!==-1) state.benchAssign[bi]=null;
+  }
+  function handleSlotClick(type, index){
+    const occupant = type==='pitch' ? state.pitchAssign[index] : state.benchAssign[index];
+    if(selectedRosterId){
+      unassign(selectedRosterId);
+      if(type==='pitch') state.pitchAssign[index]=selectedRosterId; else state.benchAssign[index]=selectedRosterId;
+      selectedRosterId=null;
+    } else if(occupant){
+      unassign(occupant);
+      selectedRosterId=occupant;
+    }
+    renderPitch(); renderBench(); renderPool(); renderKadro(); renderStats();
+    saveState();
+  }
+  function rosterById(id){ return state.roster.find(p=>p.id===id); }
+
+  // ---------- pitch ----------
+  function renderPitch(){
+    const pitchOuter = document.getElementById('pitchOuter');
+    let svgHolder = pitchOuter.querySelector('.pitch-svg');
+    if(!svgHolder){
+      pitchOuter.insertAdjacentHTML('afterbegin', buildPitchSvg());
+    }
+    slotsLayer.innerHTML='';
+    const form=FORMATIONS[state.formation];
+    let idx=0;
+    form.lines.forEach((line, li)=>{
+      const role=form.roles[li];
+      line.xs.forEach(x=>{
+        const sx = scaledX(x, line.y);
+        const rosterId=state.pitchAssign[idx];
+        const player=rosterId ? rosterById(rosterId) : null;
+        const color = role==='KL' ? '#2E8B57' : state.color;
+        const div=document.createElement('div');
+        div.className='slot ' + (player?'filled':'empty');
+        div.style.left=sx+'%'; div.style.top=line.y+'%';
+        div.innerHTML =
+          '<div class="jersey-wrap">'+jerseySvg(color, state.logo)+'</div>'+
+          (player ? '<div class="jname">'+escapeHtml(player.name)+'</div>' : '');
+        const myIdx=idx;
+        div.addEventListener('click', ()=> handleSlotClick('pitch', myIdx));
+        slotsLayer.appendChild(div);
+        idx++;
+      });
+    });
+  }
+
+  function renderBench(){
+    benchRows.innerHTML='';
+    state.benchAssign.forEach((rosterId,i)=>{
+      const player=rosterId ? rosterById(rosterId) : null;
+      const row=document.createElement('div');
+      row.className='bench-row-cap '+(player?'':'empty');
+      row.innerHTML =
+        '<div class="bjersey">'+jerseySvg(state.color, state.logo)+'</div>'+
+        '<div class="binfo"><div class="bname">'+(player?escapeHtml(player.name):'')+'</div></div>';
+      row.addEventListener('click', ()=> handleSlotClick('bench', i));
+      benchRows.appendChild(row);
+    });
+  }
+
+  function renderStats(){
+    const pf=state.pitchAssign.filter(Boolean).length;
+    const bf=state.benchAssign.filter(Boolean).length;
+    const tf=state.roster.filter(p=>p.name.trim()).length;
+    kbPitch.textContent=pf+'/'+state.pitchAssign.length;
+    kbBench.textContent=bf+'/'+state.benchAssign.length;
+    kbTotal.textContent=tf;
+  }
+
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  function renderAll(){
+    teamNameInput.value=state.teamName;
+    matchInfoInput.value=state.matchInfo;
+    formationSelect.value=state.formation;
+    benchCountSelect.value=state.benchCount;
+    document.getElementById('benchMaxLabel').textContent = 'MAKS ' + state.benchCount + ' KİŞİ';
+    fbCode.textContent=state.formation;
+    updateTeamSub();
+    renderColors();
+    applyLogo();
+    renderKadro();
+    renderPitch(); renderBench(); renderPool(); renderStats();
+  }
+
+  // ---------- persistence (browser localStorage — works on any host, incl. Vercel) ----------
+  let saveTimer=null;
+  function saveState(){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(()=>{
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      catch(e){ console.error('save failed', e); }
+    }, 450);
+  }
+  async function loadState(){
+    statusEl.textContent='Yükleniyor...';
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const loaded=JSON.parse(raw);
+        state=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), loaded);
+        if(!state.roster || state.roster.length!==35) state.roster=makeRoster();
+        state.roster.forEach(p=>{ if(p.pos===undefined) p.pos=''; });
+        if(!state.pitchAssign || state.pitchAssign.length!==countSlots(state.formation)){
+          state.pitchAssign=new Array(countSlots(state.formation)).fill(null);
+        }
+        if(!state.benchCount) state.benchCount = 7;
+        if(!state.benchAssign || state.benchAssign.length!==state.benchCount){
+          const old = state.benchAssign || [];
+          const next = new Array(state.benchCount).fill(null);
+          for(let i=0;i<Math.min(state.benchCount, old.length);i++){ next[i]=old[i]; }
+          state.benchAssign = next;
+        }
+      }
+    }catch(e){ /* keep default */ }
+    statusEl.textContent='\u00A0';
+    renderAll();
+  }
+
+  document.getElementById('clearBoardBtn').addEventListener('click', ()=>{
+    state.pitchAssign=new Array(countSlots(state.formation)).fill(null);
+    state.benchAssign=new Array(state.benchCount).fill(null);
+    selectedRosterId=null;
+    renderPitch(); renderBench(); renderPool(); renderKadro(); renderStats();
+    saveState();
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', async ()=>{
+    statusEl.textContent='Görsel hazırlanıyor...';
+    const target=document.getElementById('captureArea');
+    try{
+      const canvas=await html2canvas(target, {backgroundColor:null, scale:2, useCORS:true});
+      const link=document.createElement('a');
+      const safeName=(state.teamName||'ilk11').replace(/[^a-zA-Z0-9ığüşöçİĞÜŞÖÇ]+/g,'-');
+      link.download=safeName+'-dizilis.png';
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+      statusEl.textContent='İndirildi ✓';
+      setTimeout(()=>{ statusEl.textContent='\u00A0'; }, 2000);
+    }catch(e){
+      console.error(e);
+      statusEl.textContent='Bir hata oluştu, tekrar deneyin.';
+    }
+  });
+
+  loadState();
+})();
+</script>
+</body>
+</html>
