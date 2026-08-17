@@ -149,6 +149,15 @@
   .capture.export-mode{ width:900px !important; }
   .capture.export-mode .main-grid{ grid-template-columns: 2.5fr 1fr !important; }
 
+  .pitch-frame{ position:relative; padding-top:5%; }
+  .goal-frame-top{
+    position:absolute; top:0; left:43.3%; right:43.3%; aspect-ratio: 13.4/5;
+    border:2px solid rgba(255,255,255,0.9); border-bottom:none; border-radius:3px 3px 0 0;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.4) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.28) 0 1px, transparent 1px 7px);
+    z-index:2;
+  }
   .pitch-outer{
     position:relative; width:100%; aspect-ratio: 68/108;
     border-radius: 8px; overflow:hidden;
@@ -314,6 +323,7 @@
 
           <div class="main-grid">
             <div class="pitch-frame">
+              <div class="goal-frame-top"></div>
               <div class="pitch-outer" id="pitchOuter">
                 <div class="slots-layer" id="slotsLayer"></div>
               </div>
