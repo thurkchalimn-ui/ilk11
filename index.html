@@ -327,8 +327,9 @@
         <input type="text" id="teamCodeInput" style="flex:1; text-transform:uppercase;">
         <button class="btn btn-ghost" id="copyCodeBtn" style="width:auto; padding:0 14px; margin-top:0;">Kopyala</button>
       </div>
+      <button class="btn btn-primary" id="applyCodeBtn" style="margin-top:8px;">Bu Kodu Uygula ve Yeniden Yükle</button>
       <div style="font-size:11px; color:var(--muted); margin-top:6px; line-height:1.4;">
-        Bu kodu diğer cihazına (telefon/bilgisayar) da gir — aynı kadro ve diziliş orada da görünür ve güncel kalır.
+        Diğer cihazına bu ekrandaki kodu (yukarıdaki 6 haneli kod) aynen gir, sonra <b>"Bu Kodu Uygula"</b>ya bas. İki cihazda da kod birebir aynı olmalı.
       </div>
       <div class="status" id="syncStatus" style="text-align:left; margin-top:6px;">&nbsp;</div>
     </div>
@@ -840,7 +841,13 @@
         if(syncStatus) syncStatus.textContent = 'Kaydediliyor...';
         db.collection('teams').doc(teamCode).set({ data: raw, updatedAt: Date.now() })
           .then(()=>{ if(syncStatus) syncStatus.textContent = 'Senkronize ✓'; })
-          .catch(e=>{ console.error('firestore save failed', e); if(syncStatus) syncStatus.textContent='Bulut kaydı başarısız, sadece bu cihazda saklandı.'; });
+          .catch(e=>{
+            console.error('firestore save failed', e);
+            const msg = (e && e.code==='permission-denied')
+              ? 'Bulut kaydı reddedildi (Firestore kuralları izin vermiyor) — sadece bu cihazda saklandı.'
+              : 'Bulut kaydı başarısız, sadece bu cihazda saklandı.';
+            if(syncStatus) syncStatus.textContent = msg;
+          });
       }
     }, 450);
   }
@@ -882,7 +889,10 @@
         })
         .catch(e=>{
           console.error('firestore load failed/timeout', e);
-          if(syncStatus) syncStatus.textContent = 'Bulut yanıt vermedi, bu cihazdaki veriyle devam ediliyor.';
+          const msg = (e && e.code==='permission-denied')
+            ? 'Bulut okuma reddedildi (Firestore kuralları izin vermiyor) — bu cihazdaki veriyle devam ediliyor.'
+            : 'Bulut yanıt vermedi, bu cihazdaki veriyle devam ediliyor.';
+          if(syncStatus) syncStatus.textContent = msg;
         })
         .finally(()=>{ setupRealtimeSync(); });
     }
@@ -912,6 +922,7 @@
   // ---------- team code UI ----------
   const teamCodeInput = document.getElementById('teamCodeInput');
   const copyCodeBtn = document.getElementById('copyCodeBtn');
+  const applyCodeBtn = document.getElementById('applyCodeBtn');
   if(teamCodeInput){ teamCodeInput.value = teamCode; }
   if(copyCodeBtn){
     copyCodeBtn.addEventListener('click', ()=>{
@@ -921,14 +932,24 @@
       }).catch(()=>{});
     });
   }
+  function applyTeamCode(){
+    const syncStatus = document.getElementById('syncStatus');
+    const newCode = (teamCodeInput.value||'').trim().toUpperCase();
+    if(!newCode){
+      if(syncStatus) syncStatus.textContent = 'Kod boş olamaz.';
+      return;
+    }
+    if(newCode === teamCode){
+      if(syncStatus) syncStatus.textContent = 'Zaten bu kod kullanılıyor.';
+      return;
+    }
+    if(syncStatus) syncStatus.textContent = 'Uygulanıyor, sayfa yenileniyor...';
+    localStorage.setItem(TEAM_CODE_KEY, newCode);
+    setTimeout(()=> location.reload(), 200);
+  }
+  if(applyCodeBtn){ applyCodeBtn.addEventListener('click', applyTeamCode); }
   if(teamCodeInput){
-    teamCodeInput.addEventListener('change', ()=>{
-      const newCode = teamCodeInput.value.trim().toUpperCase();
-      if(newCode && newCode !== teamCode){
-        localStorage.setItem(TEAM_CODE_KEY, newCode);
-        location.reload();
-      }
-    });
+    teamCodeInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); applyTeamCode(); } });
   }
 
   document.getElementById('clearBoardBtn').addEventListener('click', ()=>{
