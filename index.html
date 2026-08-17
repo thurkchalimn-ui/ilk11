@@ -146,6 +146,8 @@
 
   .main-grid{ display:grid; grid-template-columns: 2.5fr 1fr; gap:14px; position:relative; z-index:1; }
   @media (max-width:700px){ .main-grid{ grid-template-columns:1fr; } }
+  .capture.export-mode{ width:900px !important; }
+  .capture.export-mode .main-grid{ grid-template-columns: 2.5fr 1fr !important; }
 
   .pitch-outer{
     position:relative; width:100%; aspect-ratio: 68/108;
@@ -1030,8 +1032,10 @@
   document.getElementById('exportBtn').addEventListener('click', async ()=>{
     statusEl.textContent='Görsel hazırlanıyor...';
     const target=document.getElementById('captureArea');
+    target.classList.add('export-mode'); // force desktop side-by-side layout at a fixed width, even on phones
+    await new Promise(r => setTimeout(r, 60)); // let the browser reflow before capturing
     try{
-      const canvas=await html2canvas(target, {backgroundColor:null, scale:2, useCORS:true});
+      const canvas=await html2canvas(target, {backgroundColor:null, scale:2, useCORS:true, width:target.scrollWidth, windowWidth:target.scrollWidth});
       const safeName=(state.teamName||'ilk11').replace(/[^a-zA-Z0-9ığüşöçİĞÜŞÖÇ]+/g,'-');
       const fileName = safeName+'-dizilis.png';
 
@@ -1064,6 +1068,8 @@
     }catch(e){
       console.error(e);
       statusEl.textContent='Bir hata oluştu, tekrar deneyin.';
+    }finally{
+      target.classList.remove('export-mode');
     }
   });
 
