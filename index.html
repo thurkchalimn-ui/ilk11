@@ -533,7 +533,7 @@
     const stripes = [];
     for(let y=0; y<100; y+=6.2){
       if(Math.floor(y/6.2)%2===0){
-        stripes.push('<rect x="0" y="'+y+'" width="100" height="6.2" fill="#0f8a40"/>');
+        stripes.push('<rect x="0" y="'+y+'" width="100" height="6.2" fill="#2fa347"/>');
       }
     }
     const pb_t=[ [scaledX(37,0),0], [scaledX(63,0),0], [scaledX(63,16),16], [scaledX(37,16),16] ];
@@ -547,18 +547,18 @@
       '<defs>' +
         '<clipPath id="pitchClip"><polygon points="13,0 87,0 100,100 0,100"/></clipPath>' +
         '<radialGradient id="grassLight" cx="50%" cy="8%" r="90%">' +
-          '<stop offset="0%" stop-color="#fff" stop-opacity="0.16"/>' +
-          '<stop offset="45%" stop-color="#fff" stop-opacity="0.04"/>' +
-          '<stop offset="100%" stop-color="#000" stop-opacity="0.28"/>' +
+          '<stop offset="0%" stop-color="#fff" stop-opacity="0.14"/>' +
+          '<stop offset="45%" stop-color="#fff" stop-opacity="0.02"/>' +
+          '<stop offset="100%" stop-color="#000" stop-opacity="0.16"/>' +
         '</radialGradient>' +
         '<linearGradient id="grassBase" x1="0%" y1="0%" x2="0%" y2="100%">' +
-          '<stop offset="0%" stop-color="#0b6a34"/>' +
-          '<stop offset="55%" stop-color="#0c7a3b"/>' +
-          '<stop offset="100%" stop-color="#0a5e2f"/>' +
+          '<stop offset="0%" stop-color="#1f9b3c"/>' +
+          '<stop offset="55%" stop-color="#238f3d"/>' +
+          '<stop offset="100%" stop-color="#1c8438"/>' +
         '</linearGradient>' +
       '</defs>' +
       '<polygon points="13,0 87,0 100,100 0,100" fill="url(#grassBase)"/>' +
-      '<g clip-path="url(#pitchClip)" opacity="0.55">' + stripes.join('') + '</g>' +
+      '<g clip-path="url(#pitchClip)" opacity="0.6">' + stripes.join('') + '</g>' +
       '<polygon points="13,0 87,0 100,100 0,100" fill="url(#grassLight)"/>' +
       '<g fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="0.5">' +
         '<polygon points="13,0 87,0 100,100 0,100"/>' +
