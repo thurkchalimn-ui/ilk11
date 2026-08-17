@@ -531,13 +531,7 @@
   document.getElementById('modalCloseBtn').addEventListener('click', ()=> modalOverlay.classList.remove('open'));
   modalOverlay.addEventListener('click', (e)=>{ if(e.target===modalOverlay) modalOverlay.classList.remove('open'); });
 
-  // ---------- pitch background (SVG, trapezoid perspective) ----------
-  // trapezoid edges: top 13%-87%, bottom 0%-100%
-  function leftEdge(y){ return 13*(1-y/100); }
-  function rightEdge(y){ return 87+13*(y/100); }
-  function fieldWidth(y){ return rightEdge(y)-leftEdge(y); }
-  function scaledX(x,y){ return leftEdge(y) + (x/100)*fieldWidth(y); }
-
+  // ---------- pitch background (SVG, straight standard pitch — no perspective) ----------
   function buildPitchSvg(){
     const stripes = [];
     for(let y=0; y<100; y+=6.2){
@@ -545,16 +539,26 @@
         stripes.push('<rect x="0" y="'+y+'" width="100" height="6.2" fill="#2fa347"/>');
       }
     }
-    const pb_t=[ [scaledX(37,0),0], [scaledX(63,0),0], [scaledX(63,16),16], [scaledX(37,16),16] ];
-    const sb_t=[ [scaledX(43,0),0], [scaledX(57,0),0], [scaledX(57,6),6], [scaledX(43,6),6] ];
-    const pb_b=[ [scaledX(20,84),84], [scaledX(80,84),84], [scaledX(80,100),100], [scaledX(20,100),100] ];
-    const sb_b=[ [scaledX(35,94),94], [scaledX(65,94),94], [scaledX(65,100),100], [scaledX(35,100),100] ];
-    const toPts = a => a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
-    const cx=scaledX(50,52), lY=52, hw=fieldWidth(52)*0.11, hh=fieldWidth(52)*0.11*0.62;
+
+    // standard proportions (relative to a full-length 0-100 pitch)
+    const boxW=59, boxDepth=15.7;   // penalty box
+    const sixW=27, sixDepth=5.2;    // six-yard box
+    const rx=13.46, ry=8.47;        // center circle / penalty-arc radius (aspect-corrected ellipse)
+    const boxL=(100-boxW)/2, boxR=100-boxL;
+    const sixL=(100-sixW)/2, sixR=100-sixL;
+    const spotTop=10.48, spotBottom=100-10.48;
+
+    function arcChordX(cy, edgeY){
+      const dy = edgeY-cy;
+      const t = Math.sqrt(Math.max(0, 1-(dy*dy)/(ry*ry)));
+      const dx = rx*t;
+      return [50-dx, 50+dx];
+    }
+    const [t1,t2] = arcChordX(spotTop, boxDepth);
+    const [b1,b2] = arcChordX(spotBottom, 100-boxDepth);
 
     return '<svg class="pitch-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
       '<defs>' +
-        '<clipPath id="pitchClip"><polygon points="13,0 87,0 100,100 0,100"/></clipPath>' +
         '<radialGradient id="grassLight" cx="50%" cy="8%" r="90%">' +
           '<stop offset="0%" stop-color="#fff" stop-opacity="0.14"/>' +
           '<stop offset="45%" stop-color="#fff" stop-opacity="0.02"/>' +
@@ -566,27 +570,23 @@
           '<stop offset="100%" stop-color="#1c8438"/>' +
         '</linearGradient>' +
       '</defs>' +
-      '<polygon points="13,0 87,0 100,100 0,100" fill="url(#grassBase)"/>' +
-      '<g clip-path="url(#pitchClip)" opacity="0.6">' + stripes.join('') + '</g>' +
-      '<polygon points="13,0 87,0 100,100 0,100" fill="url(#grassLight)"/>' +
-      '<g fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="0.5">' +
-        '<polygon points="13,0 87,0 100,100 0,100"/>' +
-        '<line x1="'+leftEdge(52)+'" y1="52" x2="'+rightEdge(52)+'" y2="52"/>' +
-        '<ellipse cx="'+cx+'" cy="'+lY+'" rx="'+hw+'" ry="'+hh+'"/>' +
-        '<polygon points="'+toPts(pb_t)+'"/>' +
-        '<polygon points="'+toPts(sb_t)+'"/>' +
-        '<polygon points="'+toPts(pb_b)+'"/>' +
-        '<polygon points="'+toPts(sb_b)+'"/>' +
+      '<rect x="0" y="0" width="100" height="100" fill="url(#grassBase)"/>' +
+      '<g opacity="0.6">' + stripes.join('') + '</g>' +
+      '<rect x="0" y="0" width="100" height="100" fill="url(#grassLight)"/>' +
+      '<g fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="0.5">' +
+        '<rect x="1.5" y="1.5" width="97" height="97"/>' +
+        '<line x1="1.5" y1="50" x2="98.5" y2="50"/>' +
+        '<ellipse cx="50" cy="50" rx="'+rx+'" ry="'+ry+'"/>' +
+        '<rect x="'+boxL+'" y="1.5" width="'+boxW+'" height="'+boxDepth+'"/>' +
+        '<rect x="'+sixL+'" y="1.5" width="'+sixW+'" height="'+sixDepth+'"/>' +
+        '<path d="M '+t1+' '+boxDepth+' A '+rx+' '+ry+' 0 0 0 '+t2+' '+boxDepth+'"/>' +
+        '<rect x="'+boxL+'" y="'+(100-boxDepth)+'" width="'+boxW+'" height="'+(boxDepth-1.5)+'"/>' +
+        '<rect x="'+sixL+'" y="'+(100-sixDepth)+'" width="'+sixW+'" height="'+(sixDepth-1.5)+'"/>' +
+        '<path d="M '+b1+' '+(100-boxDepth)+' A '+rx+' '+ry+' 0 0 1 '+b2+' '+(100-boxDepth)+'"/>' +
       '</g>' +
-      '<circle cx="'+cx+'" cy="'+lY+'" r="0.5" fill="rgba(255,255,255,0.7)"/>' +
-      '<g stroke="rgba(255,255,255,0.5)" stroke-width="0.15">' +
-        (()=>{ let net=''; const gy0=0, gy1=6, gxL=scaledX(41,0), gxR=scaledX(59,0);
-          for(let i=0;i<=8;i++){ const gx=gxL+(gxR-gxL)*(i/8); net+='<line x1="'+gx+'" y1="'+gy0+'" x2="'+gx+'" y2="'+gy1+'"/>'; }
-          return net; })() +
-        (()=>{ let net=''; const gy0=100, gy1=94, gxL=scaledX(41,100), gxR=scaledX(59,100);
-          for(let i=0;i<=8;i++){ const gx=gxL+(gxR-gxL)*(i/8); net+='<line x1="'+gx+'" y1="'+gy0+'" x2="'+gx+'" y2="'+gy1+'"/>'; }
-          return net; })() +
-      '</g>' +
+      '<circle cx="50" cy="50" r="0.5" fill="rgba(255,255,255,0.75)"/>' +
+      '<circle cx="50" cy="'+spotTop+'" r="0.5" fill="rgba(255,255,255,0.75)"/>' +
+      '<circle cx="50" cy="'+spotBottom+'" r="0.5" fill="rgba(255,255,255,0.75)"/>' +
     '</svg>';
   }
 
@@ -823,7 +823,7 @@
     form.lines.forEach((line, li)=>{
       const role=form.roles[li];
       line.xs.forEach(x=>{
-        const sx = scaledX(x, line.y);
+        const sx = x; // straight pitch — no perspective distortion needed
         const rosterId=state.pitchAssign[idx];
         const player=rosterId ? rosterById(rosterId) : null;
         const color = role==='KL' ? '#2E8B57' : state.color;
