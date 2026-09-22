@@ -78,6 +78,9 @@
   }
   .report-head-row .rp-player{ flex:0 0 140px; min-width:140px; }
   .report-head-row .rp-field{ flex:0 0 54px; text-align:center; }
+  .rp-sortable{ cursor:pointer; user-select:none; border-radius:5px; padding:2px 1px; transition: color .12s, background .12s; }
+  .rp-sortable:hover{ color:var(--chalk); background: rgba(255,255,255,0.06); }
+  .rp-sortable.active{ color:var(--flood); }
   .report-row{
     display:flex; flex-wrap:nowrap; gap:6px; align-items:center;
     padding:7px 6px; border-radius:8px; background: rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06);
@@ -1204,6 +1207,19 @@
   });
 
   // ---------- Sezon İstatistikleri ----------
+  let seasonSortKey = 'goals';
+  let seasonSortDir = 'desc';
+  const SEASON_COLUMNS = [
+    {key:'matches', label:'Maç'},
+    {key:'starts', label:'İlk 11'},
+    {key:'bench', label:'Yedek'},
+    {key:'played', label:'Oynadı'},
+    {key:'goals', label:'Gol'},
+    {key:'assists', label:'Asist'},
+    {key:'yellow', label:'Sarı'},
+    {key:'red', label:'Kırmızı'}
+  ];
+
   function renderSeason(){
     const seasonTable = document.getElementById('seasonTable');
     const seasonEmptyMsg = document.getElementById('seasonEmptyMsg');
@@ -1232,20 +1248,30 @@
         t.red += parseInt(p.red||'0',10)||0;
       });
     });
-    const rows = Object.values(totals).sort((a,b)=> b.goals-a.goals || b.assists-a.assists || b.matches-a.matches);
+    const dir = seasonSortDir==='desc' ? -1 : 1;
+    const rows = Object.values(totals).sort((a,b)=>{
+      const diff = (a[seasonSortKey]||0) - (b[seasonSortKey]||0);
+      if(diff!==0) return diff*dir;
+      return (b.goals-a.goals) || (b.assists-a.assists) || (b.matches-a.matches);
+    });
 
     const head = document.createElement('div');
     head.className='report-head-row';
-    head.innerHTML =
-      '<div class="rp-player">Oyuncu</div>' +
-      '<div class="rp-field">Maç</div>' +
-      '<div class="rp-field">İlk 11</div>' +
-      '<div class="rp-field">Yedek</div>' +
-      '<div class="rp-field">Oynadı</div>' +
-      '<div class="rp-field">Gol</div>' +
-      '<div class="rp-field">Asist</div>' +
-      '<div class="rp-field">Sarı</div>' +
-      '<div class="rp-field">Kırmızı</div>';
+    let headHtml = '<div class="rp-player">Oyuncu</div>';
+    SEASON_COLUMNS.forEach(col=>{
+      const active = seasonSortKey===col.key;
+      const arrow = active ? (seasonSortDir==='desc' ? ' ▼' : ' ▲') : '';
+      headHtml += '<div class="rp-field rp-sortable'+(active?' active':'')+'" data-sort-key="'+col.key+'">'+col.label+arrow+'</div>';
+    });
+    head.innerHTML = headHtml;
+    head.querySelectorAll('.rp-sortable').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const key = el.dataset.sortKey;
+        if(seasonSortKey===key){ seasonSortDir = seasonSortDir==='desc' ? 'asc' : 'desc'; }
+        else { seasonSortKey = key; seasonSortDir = 'desc'; }
+        renderSeason();
+      });
+    });
     seasonTable.appendChild(head);
 
     rows.forEach(t=>{
