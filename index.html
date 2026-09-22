@@ -126,6 +126,8 @@
   }
   .history-card .hc-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
   .history-card .hc-opp{ font-size:14px; font-weight:700; color:var(--chalk); }
+  .history-card .hc-title{ font-size:15px; font-weight:800; color:var(--flood); letter-spacing:0.2px; }
+  .history-card .hc-opp-sub{ font-size:12px; font-weight:600; color:var(--chalk); margin-top:1px; }
   .history-card .hc-score{ font-family:'Teko',sans-serif; font-size:20px; color:var(--flood); }
   .history-card .hc-meta{ font-size:10.5px; color:var(--muted); margin-top:2px; }
   .history-card .hc-detail{ display:none; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -477,6 +479,10 @@
       <div class="kadro-sub">Kadrodaki <b>tüm oyuncular</b> burada listelenir — Diziliş'e göre <b>İlk 11 / Yedek / Seçilmedi</b> konumu otomatik işaretlenir. Sen sadece yoklama (maça geldi), oyuna girdi, kart ve gol/asist bilgilerini işaretle. Bu bilgiler kalıcı olarak saklanır.</div>
 
       <div style="display:flex; gap:10px; align-items:flex-end; margin-bottom:14px; flex-wrap:wrap;">
+        <div class="field" style="margin-bottom:0; max-width:220px; flex:1 1 180px;">
+          <label>Maç Başlığı (opsiyonel)</label>
+          <input type="text" id="matchTitleInput" placeholder="Örn: Lig 5. Hafta, Kupa Yarı Final">
+        </div>
         <div class="field" style="margin-bottom:0; max-width:90px;">
           <label>Biz</label>
           <input type="text" id="scoreForInput" inputmode="numeric" placeholder="0">
@@ -632,7 +638,7 @@
     pitchAssign: new Array(11).fill(null),
     benchAssign: new Array(7).fill(null),
     matchReport: {}, // { [rosterId]: {attended, played, yellow, blue, red, goals, assists} } — current, unsaved match
-    scoreFor: '', scoreAgainst: '',
+    matchTitle: '', scoreFor: '', scoreAgainst: '',
     matchHistory: [] // [{id, opponent, matchDate, matchTime, venue, formation, scoreFor, scoreAgainst, savedAt, players:{[rosterId]:{name,pos,position,attended,played,yellow,blue,red,goals,assists}}}]
   };
 
@@ -1154,6 +1160,11 @@
   // ---------- score inputs ----------
   const scoreForInput = document.getElementById('scoreForInput');
   const scoreAgainstInput = document.getElementById('scoreAgainstInput');
+  const matchTitleInput = document.getElementById('matchTitleInput');
+  matchTitleInput.addEventListener('input', ()=>{
+    state.matchTitle = matchTitleInput.value;
+    saveState();
+  });
   scoreForInput.addEventListener('input', ()=>{
     state.scoreFor = scoreForInput.value.replace(/[^0-9]/g,'');
     if(scoreForInput.value !== state.scoreFor) scoreForInput.value = state.scoreFor;
@@ -1187,6 +1198,7 @@
     });
     const entry = {
       id: 'm'+Date.now(),
+      title: state.matchTitle||'',
       opponent: state.opponent||'', matchDate: state.matchDate||'', matchTime: state.matchTime||'', venue: state.venue||'',
       formation: state.formation, scoreFor: state.scoreFor||'', scoreAgainst: state.scoreAgainst||'',
       savedAt: Date.now(), players
@@ -1195,6 +1207,7 @@
 
     // reset current match so the app is ready for the next fixture
     state.matchReport = {};
+    state.matchTitle = '';
     state.scoreFor = ''; state.scoreAgainst = '';
     state.opponent=''; state.matchDate=''; state.matchTime=''; state.venue='';
     state.pitchAssign = new Array(countSlots(state.formation)).fill(null);
@@ -1305,6 +1318,11 @@
       card.className='history-card';
       const dateInfo = [m.matchDate, m.matchTime].filter(Boolean).join(' · ');
       const metaLine = [dateInfo, m.venue, m.formation].filter(Boolean).join(' — ');
+      const headingHtml = m.title
+        ? '<div class="hc-title">'+escapeHtml(m.title)+'</div>'+
+          (m.opponent ? '<div class="hc-opp-sub">vs '+escapeHtml(m.opponent)+'</div>' : '')+
+          '<div class="hc-meta">'+escapeHtml(metaLine)+'</div>'
+        : '<div class="hc-opp">'+(m.opponent?escapeHtml(m.opponent):'Rakip belirtilmemiş')+'</div><div class="hc-meta">'+escapeHtml(metaLine)+'</div>';
       let detailRows = '';
       Object.values(m.players).forEach(p=>{
         detailRows += '<div class="report-row" style="cursor:default;">' +
@@ -1317,7 +1335,7 @@
       });
       card.innerHTML =
         '<div class="hc-top">' +
-          '<div><div class="hc-opp">'+(m.opponent?escapeHtml(m.opponent):'Rakip belirtilmemiş')+'</div><div class="hc-meta">'+escapeHtml(metaLine)+'</div></div>' +
+          '<div>'+headingHtml+'</div>' +
           '<div class="hc-score">'+(m.scoreFor!==''||m.scoreAgainst!=='' ? (m.scoreFor||'0')+' - '+(m.scoreAgainst||'0') : '')+'</div>' +
         '</div>' +
         '<div class="hc-detail">' + detailRows + '<button class="hc-del">Bu Maçı Sil</button></div>';
@@ -1386,6 +1404,7 @@
     matchDateInput.value=state.matchDate||'';
     matchTimeInput.value=state.matchTime||'';
     venueInput.value=state.venue||'';
+    matchTitleInput.value=state.matchTitle||'';
     scoreForInput.value=state.scoreFor||'';
     scoreAgainstInput.value=state.scoreAgainst||'';
     renderMeta();
@@ -1420,6 +1439,7 @@
     if(state.matchTime===undefined) state.matchTime='';
     if(state.venue===undefined) state.venue='';
     if(!state.matchReport || typeof state.matchReport!=='object') state.matchReport={};
+    if(state.matchTitle===undefined) state.matchTitle='';
     if(state.scoreFor===undefined) state.scoreFor='';
     if(state.scoreAgainst===undefined) state.scoreAgainst='';
     if(!Array.isArray(state.matchHistory)) state.matchHistory=[];
